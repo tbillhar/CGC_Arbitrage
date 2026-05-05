@@ -27,12 +27,14 @@ class CandidateListing:
     grade: float | None
     page_quality: str | None
     fair_value: float
+    fair_value_source: str
     listing_price: float
     max_buy_price: float
     estimated_profit: float
     estimated_margin: float
     url: str
     source_item_id: str
+    seller_username: str
 
 
 class Database:
@@ -62,16 +64,20 @@ class Database:
                 grade REAL,
                 page_quality TEXT,
                 fair_value REAL NOT NULL,
+                fair_value_source TEXT NOT NULL DEFAULT '',
                 listing_price REAL NOT NULL,
                 max_buy_price REAL NOT NULL,
                 estimated_profit REAL NOT NULL,
                 estimated_margin REAL NOT NULL,
                 url TEXT NOT NULL,
                 source_item_id TEXT NOT NULL,
+                seller_username TEXT NOT NULL DEFAULT '',
                 scanned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
             """
         )
+        self._ensure_scan_result_column("fair_value_source", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_scan_result_column("seller_username", "TEXT NOT NULL DEFAULT ''")
         self.connection.commit()
 
     def add_watchlist_item(self, item: WatchlistItem) -> int:
@@ -129,10 +135,11 @@ class Database:
             self.connection.executemany(
                 """
                 INSERT INTO scan_results (
-                    title, issue_number, grade, page_quality, fair_value, listing_price,
-                    max_buy_price, estimated_profit, estimated_margin, url, source_item_id
+                    title, issue_number, grade, page_quality, fair_value, fair_value_source,
+                    listing_price, max_buy_price, estimated_profit, estimated_margin, url,
+                    source_item_id, seller_username
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -141,12 +148,14 @@ class Database:
                         candidate.grade,
                         candidate.page_quality,
                         candidate.fair_value,
+                        candidate.fair_value_source,
                         candidate.listing_price,
                         candidate.max_buy_price,
                         candidate.estimated_profit,
                         candidate.estimated_margin,
                         candidate.url,
                         candidate.source_item_id,
+                        candidate.seller_username,
                     )
                     for candidate in candidates
                 ],
@@ -163,3 +172,11 @@ class Database:
             round(item.max_grade, 1),
             round(item.target_profit_margin, 4),
         )
+
+    def _ensure_scan_result_column(self, column_name: str, definition: str) -> None:
+        columns = {
+            row["name"]
+            for row in self.connection.execute("PRAGMA table_info(scan_results)").fetchall()
+        }
+        if column_name not in columns:
+            self.connection.execute(f"ALTER TABLE scan_results ADD COLUMN {column_name} {definition}")

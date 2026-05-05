@@ -13,6 +13,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
     QApplication,
     QDoubleSpinBox,
+    QFileDialog,
     QFormLayout,
     QHBoxLayout,
     QHeaderView,
@@ -96,6 +97,7 @@ class ScannerWindow(QMainWindow):
         self.gocollect = GoCollectClient()
         self.local_values = LocalFairValueProvider()
         self.url_by_row: dict[int, str] = {}
+        self.current_candidates: list[CandidateListing] = []
 
         self.setWindowTitle(APP_NAME)
         self.resize(1180, 760)
@@ -133,14 +135,17 @@ class ScannerWindow(QMainWindow):
         import_button = QPushButton("Load liquid list")
         delete_button = QPushButton("Remove selected")
         scan_button = QPushButton("Scan watchlist")
+        export_button = QPushButton("Export candidates CSV")
         add_button.clicked.connect(self._add_watchlist_item)
         import_button.clicked.connect(self._import_preset_watchlist)
         delete_button.clicked.connect(self._delete_selected_watchlist_item)
         scan_button.clicked.connect(self._scan_watchlist)
+        export_button.clicked.connect(self._export_candidates)
         button_row.addWidget(add_button)
         button_row.addWidget(import_button)
         button_row.addWidget(delete_button)
         button_row.addStretch(1)
+        button_row.addWidget(export_button)
         button_row.addWidget(scan_button)
         layout.addLayout(button_row)
 
@@ -153,7 +158,7 @@ class ScannerWindow(QMainWindow):
         layout.addWidget(self.watchlist_table, 1)
 
         layout.addWidget(QLabel("Candidate listings"))
-        self.results_table = QTableWidget(0, 10)
+        self.results_table = QTableWidget(0, 13)
         self.results_table.setHorizontalHeaderLabels(
             [
                 "Title",
@@ -161,10 +166,13 @@ class ScannerWindow(QMainWindow):
                 "Grade",
                 "Pages",
                 "Fair Value",
+                "Value Source",
                 "Price",
                 "Max Buy",
                 "Profit",
                 "Margin",
+                "Seller",
+                "Item ID",
                 "URL",
             ]
         )
@@ -339,16 +347,19 @@ class ScannerWindow(QMainWindow):
                         grade=parsed.grade,
                         page_quality=parsed.page_quality,
                         fair_value=fair_value.value,
+                        fair_value_source=fair_value.source,
                         listing_price=listing.price,
                         max_buy_price=deal.max_buy_price,
                         estimated_profit=deal.estimated_profit,
                         estimated_margin=deal.estimated_margin,
                         url=listing.item_url,
                         source_item_id=listing.item_id,
+                        seller_username=listing.seller_username,
                     )
                 )
 
         diagnostics.candidates = len(candidates)
+        self.current_candidates = candidates
         self.database.replace_scan_results(candidates)
         self._render_candidates(candidates)
         self.diagnostics_box.setPlainText(diagnostics.to_text())
@@ -381,10 +392,13 @@ class ScannerWindow(QMainWindow):
                 QTableWidgetItem(f"{candidate.grade:g}" if candidate.grade is not None else ""),
                 QTableWidgetItem(candidate.page_quality or ""),
                 MoneyItem(candidate.fair_value),
+                QTableWidgetItem(candidate.fair_value_source),
                 MoneyItem(candidate.listing_price),
                 MoneyItem(candidate.max_buy_price),
                 MoneyItem(candidate.estimated_profit),
                 PercentItem(candidate.estimated_margin),
+                QTableWidgetItem(candidate.seller_username),
+                QTableWidgetItem(candidate.source_item_id),
                 QTableWidgetItem(candidate.url),
             ]
             for column, table_item in enumerate(values):
@@ -392,9 +406,63 @@ class ScannerWindow(QMainWindow):
         self.results_table.setSortingEnabled(True)
 
     def _open_listing(self, row: int, _column: int) -> None:
-        url_item = self.results_table.item(row, 9)
+        url_item = self.results_table.item(row, 12)
         if url_item and url_item.text():
             QDesktopServices.openUrl(QUrl(url_item.text()))
+
+    def _export_candidates(self) -> None:
+        if not self.current_candidates:
+            QMessageBox.information(self, APP_NAME, "There are no candidates to export.")
+            return
+
+        path, _selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Export candidates",
+            "cgc_candidates.csv",
+            "CSV files (*.csv)",
+        )
+        if not path:
+            return
+
+        with open(path, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file,
+                fieldnames=[
+                    "title",
+                    "issue_number",
+                    "grade",
+                    "page_quality",
+                    "fair_value",
+                    "fair_value_source",
+                    "listing_price",
+                    "max_buy_price",
+                    "estimated_profit",
+                    "estimated_margin",
+                    "seller_username",
+                    "source_item_id",
+                    "url",
+                ],
+            )
+            writer.writeheader()
+            for candidate in self.current_candidates:
+                writer.writerow(
+                    {
+                        "title": candidate.title,
+                        "issue_number": candidate.issue_number,
+                        "grade": candidate.grade,
+                        "page_quality": candidate.page_quality,
+                        "fair_value": candidate.fair_value,
+                        "fair_value_source": candidate.fair_value_source,
+                        "listing_price": candidate.listing_price,
+                        "max_buy_price": candidate.max_buy_price,
+                        "estimated_profit": candidate.estimated_profit,
+                        "estimated_margin": candidate.estimated_margin,
+                        "seller_username": candidate.seller_username,
+                        "source_item_id": candidate.source_item_id,
+                        "url": candidate.url,
+                    }
+                )
+        self.status_label.setText(f"Exported {len(self.current_candidates)} candidates to {path}.")
 
     def closeEvent(self, event: Any) -> None:
         self.database.close()
