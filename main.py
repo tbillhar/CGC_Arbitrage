@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import sys
+from dataclasses import dataclass, field
 from typing import Any
 
 from PySide6.QtCore import Qt
@@ -21,6 +22,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPushButton,
     QSpinBox,
+    QPlainTextEdit,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
@@ -29,7 +31,7 @@ from PySide6.QtWidgets import (
 
 from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING
 from database import CandidateListing, Database, WatchlistItem
-from ebay_client import EbayClient
+from ebay_client import EbayApiError, EbayClient, EbayCredentialsMissingError
 from gocollect_client import GoCollectClient
 from parser import parse_listing_title
 from valuation import FairValue, LocalFairValueProvider, calculate_deal
@@ -55,6 +57,35 @@ class PercentItem(QTableWidgetItem):
         return float(self.data(Qt.ItemDataRole.UserRole) or 0) < float(
             other.data(Qt.ItemDataRole.UserRole) or 0
         )
+
+
+@dataclass
+class ScanDiagnostics:
+    watchlist_items: int = 0
+    ebay_queries: int = 0
+    listings_found: int = 0
+    missing_grade: int = 0
+    grade_out_of_range: int = 0
+    missing_fair_value: int = 0
+    unprofitable: int = 0
+    candidates: int = 0
+    api_errors: list[str] = field(default_factory=list)
+
+    def to_text(self) -> str:
+        lines = [
+            f"Watchlist rows scanned: {self.watchlist_items}",
+            f"eBay searches attempted: {self.ebay_queries}",
+            f"eBay listings returned: {self.listings_found}",
+            f"Skipped: no parsed CGC grade: {self.missing_grade}",
+            f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
+            f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
+            f"Skipped: below target profit: {self.unprofitable}",
+            f"Candidates shown: {self.candidates}",
+        ]
+        if self.api_errors:
+            lines.append("API/configuration issues:")
+            lines.extend(f"- {error}" for error in self.api_errors)
+        return "\n".join(lines)
 
 
 class ScannerWindow(QMainWindow):
@@ -147,6 +178,11 @@ class ScannerWindow(QMainWindow):
 
         self.status_label = QLabel("Ready")
         layout.addWidget(self.status_label)
+        self.diagnostics_box = QPlainTextEdit()
+        self.diagnostics_box.setReadOnly(True)
+        self.diagnostics_box.setMaximumHeight(150)
+        self.diagnostics_box.setPlainText("Scan diagnostics will appear here.")
+        layout.addWidget(self.diagnostics_box)
         self.setCentralWidget(root)
 
     def _add_watchlist_item(self) -> None:
@@ -257,24 +293,41 @@ class ScannerWindow(QMainWindow):
             return
 
         candidates: list[CandidateListing] = []
+        diagnostics = ScanDiagnostics(watchlist_items=len(watchlist))
         for item in watchlist:
             self.status_label.setText(f"Scanning {item.title} #{item.issue_number}...")
             QApplication.processEvents()
-            listings = self.ebay.search_active_listings(
-                item.title,
-                item.issue_number,
-                item.min_grade,
-                item.max_grade,
-            )
+            diagnostics.ebay_queries += 1
+            try:
+                listings = self.ebay.search_active_listings(
+                    item.title,
+                    item.issue_number,
+                    item.min_grade,
+                    item.max_grade,
+                )
+            except EbayCredentialsMissingError as error:
+                diagnostics.api_errors.append(str(error))
+                break
+            except EbayApiError as error:
+                diagnostics.api_errors.append(f"{item.title} #{item.issue_number}: {error}")
+                continue
+
+            diagnostics.listings_found += len(listings)
             for listing in listings:
                 parsed = parse_listing_title(listing.title)
-                if parsed.grade is None or not (item.min_grade <= parsed.grade <= item.max_grade):
+                if parsed.grade is None:
+                    diagnostics.missing_grade += 1
+                    continue
+                if not (item.min_grade <= parsed.grade <= item.max_grade):
+                    diagnostics.grade_out_of_range += 1
                     continue
                 fair_value = self._fetch_fair_value(item.title, item.issue_number, parsed.grade)
                 if fair_value is None:
+                    diagnostics.missing_fair_value += 1
                     continue
                 deal = calculate_deal(fair_value.value, listing.price, item.target_profit_margin)
                 if not deal.is_candidate:
+                    diagnostics.unprofitable += 1
                     continue
                 candidates.append(
                     CandidateListing(
@@ -292,9 +345,14 @@ class ScannerWindow(QMainWindow):
                     )
                 )
 
+        diagnostics.candidates = len(candidates)
         self.database.replace_scan_results(candidates)
         self._render_candidates(candidates)
-        self.status_label.setText(f"Scan complete. {len(candidates)} candidates found.")
+        self.diagnostics_box.setPlainText(diagnostics.to_text())
+        if diagnostics.api_errors:
+            self.status_label.setText("Scan stopped with configuration/API issues.")
+        else:
+            self.status_label.setText(f"Scan complete. {len(candidates)} candidates found.")
 
     def _fetch_fair_value(self, title: str, issue_number: str, grade: float) -> FairValue | None:
         fair_value = self.gocollect.fetch_fair_value(title, issue_number, grade)
