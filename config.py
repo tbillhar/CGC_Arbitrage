@@ -16,10 +16,15 @@ PRESET_WATCHLIST_PATH = Path(
 LOCAL_FAIR_VALUES_PATH = Path(
     os.getenv("CGC_LOCAL_FAIR_VALUES", Path(__file__).with_name("fair_values.csv"))
 )
+MOCK_EBAY_LISTINGS_PATH = Path(
+    os.getenv("CGC_MOCK_EBAY_LISTINGS", Path(__file__).with_name("mock_ebay_listings.csv"))
+)
 
 
 @dataclass(frozen=True)
 class EbayConfig:
+    mode: str = os.getenv("CGC_EBAY_MODE", "live").lower()
+    mock_listings_path: Path = MOCK_EBAY_LISTINGS_PATH
     client_id: str = os.getenv("EBAY_CLIENT_ID", "")
     client_secret: str = os.getenv("EBAY_CLIENT_SECRET", "")
     marketplace_id: str = os.getenv("EBAY_MARKETPLACE_ID", "EBAY_US")

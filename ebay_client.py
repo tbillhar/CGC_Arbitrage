@@ -7,6 +7,7 @@ credentials are available, and raises typed errors when scanning cannot proceed.
 from __future__ import annotations
 
 import base64
+import csv
 import json
 from dataclasses import dataclass
 from typing import Any, Iterable
@@ -48,6 +49,10 @@ class EbayClient:
     def has_credentials(self) -> bool:
         return bool(self.config.client_id and self.config.client_secret)
 
+    @property
+    def is_mock_mode(self) -> bool:
+        return self.config.mode == "mock"
+
     def search_active_listings(
         self,
         title: str,
@@ -56,6 +61,9 @@ class EbayClient:
         max_grade: float,
         limit: int = 50,
     ) -> list[EbayListing]:
+        if self.is_mock_mode:
+            return self._search_mock_listings(title, issue_number, limit)
+
         if not self.has_credentials:
             raise EbayCredentialsMissingError("eBay credentials are not configured.")
 
@@ -66,6 +74,46 @@ class EbayClient:
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             raise EbayApiError(f"eBay Browse API request failed: {error}") from error
         return list(self._parse_item_summaries(payload.get("itemSummaries", [])))
+
+    def _search_mock_listings(self, title: str, issue_number: str, limit: int) -> list[EbayListing]:
+        if not self.config.mock_listings_path.exists():
+            raise EbayApiError(f"Mock eBay listings file not found: {self.config.mock_listings_path}")
+
+        matches: list[EbayListing] = []
+        title_key = title.strip().casefold()
+        issue_key = issue_number.strip().casefold()
+        with self.config.mock_listings_path.open("r", newline="", encoding="utf-8-sig") as file:
+            reader = csv.DictReader(file)
+            required_columns = {"item_id", "watch_title", "watch_issue_number", "title", "price", "item_url"}
+            if not reader.fieldnames or not required_columns.issubset(set(reader.fieldnames)):
+                missing = ", ".join(sorted(required_columns - set(reader.fieldnames or [])))
+                raise EbayApiError(f"Mock eBay listings file is missing required columns: {missing}")
+
+            for line_number, row in enumerate(reader, start=2):
+                if (row["watch_title"].strip().casefold(), row["watch_issue_number"].strip().casefold()) != (
+                    title_key,
+                    issue_key,
+                ):
+                    continue
+                try:
+                    price = float(row["price"])
+                except (TypeError, ValueError) as error:
+                    raise EbayApiError(f"Mock eBay listings row {line_number} has an invalid price.") from error
+
+                matches.append(
+                    EbayListing(
+                        item_id=row["item_id"].strip(),
+                        title=row["title"].strip(),
+                        price=price,
+                        currency=(row.get("currency") or "USD").strip() or "USD",
+                        item_url=row["item_url"].strip(),
+                        seller_username=(row.get("seller_username") or "mock_seller").strip(),
+                    )
+                )
+                if len(matches) >= limit:
+                    break
+
+        return matches
 
     def _parse_item_summaries(self, items: Iterable[dict[str, Any]]) -> Iterable[EbayListing]:
         for item in items:
