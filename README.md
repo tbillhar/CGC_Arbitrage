@@ -72,6 +72,10 @@ Until authentication and exact endpoint mapping are confirmed, fair values come 
 
 SQLite data is stored at `%USERPROFILE%\.cgc_arbitrage\scanner.sqlite3` by default.
 
+## Convention Workflow
+
+For a buying day or convention prep checklist, use [convention_runbook.md](convention_runbook.md).
+
 ## Desktop Shortcut
 
 The repo includes [run_app.bat](run_app.bat), which starts the app using the project virtual environment.
