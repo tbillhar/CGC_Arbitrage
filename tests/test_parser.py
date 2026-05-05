@@ -24,3 +24,37 @@ def test_raw_listing_without_slab_grade_is_not_parsed_as_cgc() -> None:
     assert parsed.issue_number == "300"
     assert parsed.grade is None
     assert parsed.grading_company is None
+
+
+def test_parse_issue_without_hash_and_page_alias() -> None:
+    parsed = parse_listing_title("ASM 300 CGC 9.8 WP")
+
+    assert parsed.issue_number == "300"
+    assert parsed.grade == 9.8
+    assert parsed.page_quality == "White Pages"
+
+
+def test_parse_grade_before_title_and_issue() -> None:
+    parsed = parse_listing_title("CGC 9.8 Amazing Spider-Man #300 White Pages")
+
+    assert parsed.issue_number == "300"
+    assert parsed.grade == 9.8
+    assert parsed.grading_company == "CGC"
+
+
+def test_parse_signature_series_and_listing_flags() -> None:
+    parsed = parse_listing_title("ASM #300 CGC SS NM/MT 9.8 Newsstand 1st Venom")
+
+    assert parsed.issue_number == "300"
+    assert parsed.grade == 9.8
+    assert "signature_series" in parsed.flags
+    assert "newsstand" in parsed.flags
+    assert "first_appearance" in parsed.flags
+
+
+def test_parse_canadian_price_variant_flag() -> None:
+    parsed = parse_listing_title("Amazing Spider-Man 252 CGC 9.6 Canadian Price Variant")
+
+    assert parsed.issue_number == "252"
+    assert parsed.grade == 9.6
+    assert "canadian_price_variant" in parsed.flags

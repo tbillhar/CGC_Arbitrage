@@ -26,6 +26,7 @@ class CandidateListing:
     issue_number: str
     grade: float | None
     page_quality: str | None
+    listing_flags: str
     fair_value: float
     fair_value_source: str
     listing_price: float
@@ -63,6 +64,7 @@ class Database:
                 issue_number TEXT NOT NULL,
                 grade REAL,
                 page_quality TEXT,
+                listing_flags TEXT NOT NULL DEFAULT '',
                 fair_value REAL NOT NULL,
                 fair_value_source TEXT NOT NULL DEFAULT '',
                 listing_price REAL NOT NULL,
@@ -78,6 +80,7 @@ class Database:
         )
         self._ensure_scan_result_column("fair_value_source", "TEXT NOT NULL DEFAULT ''")
         self._ensure_scan_result_column("seller_username", "TEXT NOT NULL DEFAULT ''")
+        self._ensure_scan_result_column("listing_flags", "TEXT NOT NULL DEFAULT ''")
         self.connection.commit()
 
     def add_watchlist_item(self, item: WatchlistItem) -> int:
@@ -135,11 +138,11 @@ class Database:
             self.connection.executemany(
                 """
                 INSERT INTO scan_results (
-                    title, issue_number, grade, page_quality, fair_value, fair_value_source,
-                    listing_price, max_buy_price, estimated_profit, estimated_margin, url,
-                    source_item_id, seller_username
+                    title, issue_number, grade, page_quality, listing_flags, fair_value,
+                    fair_value_source, listing_price, max_buy_price, estimated_profit,
+                    estimated_margin, url, source_item_id, seller_username
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 [
                     (
@@ -147,6 +150,7 @@ class Database:
                         candidate.issue_number,
                         candidate.grade,
                         candidate.page_quality,
+                        candidate.listing_flags,
                         candidate.fair_value,
                         candidate.fair_value_source,
                         candidate.listing_price,

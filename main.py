@@ -65,7 +65,9 @@ class ScanDiagnostics:
     watchlist_items: int = 0
     ebay_queries: int = 0
     listings_found: int = 0
+    not_slabbed: int = 0
     missing_grade: int = 0
+    slabbed_missing_grade: int = 0
     grade_out_of_range: int = 0
     missing_fair_value: int = 0
     unprofitable: int = 0
@@ -77,7 +79,9 @@ class ScanDiagnostics:
             f"Watchlist rows scanned: {self.watchlist_items}",
             f"eBay searches attempted: {self.ebay_queries}",
             f"eBay listings returned: {self.listings_found}",
+            f"Skipped: not slabbed: {self.not_slabbed}",
             f"Skipped: no parsed CGC grade: {self.missing_grade}",
+            f"Skipped: slabbed but no parsed grade: {self.slabbed_missing_grade}",
             f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
             f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
             f"Skipped: below target profit: {self.unprofitable}",
@@ -158,13 +162,14 @@ class ScannerWindow(QMainWindow):
         layout.addWidget(self.watchlist_table, 1)
 
         layout.addWidget(QLabel("Candidate listings"))
-        self.results_table = QTableWidget(0, 13)
+        self.results_table = QTableWidget(0, 14)
         self.results_table.setHorizontalHeaderLabels(
             [
                 "Title",
                 "Issue",
                 "Grade",
                 "Pages",
+                "Flags",
                 "Fair Value",
                 "Value Source",
                 "Price",
@@ -327,6 +332,10 @@ class ScannerWindow(QMainWindow):
             for listing in listings:
                 parsed = parse_listing_title(listing.title)
                 if parsed.grade is None:
+                    if parsed.is_slabbed:
+                        diagnostics.slabbed_missing_grade += 1
+                    else:
+                        diagnostics.not_slabbed += 1
                     diagnostics.missing_grade += 1
                     continue
                 if not (item.min_grade <= parsed.grade <= item.max_grade):
@@ -346,6 +355,7 @@ class ScannerWindow(QMainWindow):
                         issue_number=parsed.issue_number or item.issue_number,
                         grade=parsed.grade,
                         page_quality=parsed.page_quality,
+                        listing_flags=", ".join(parsed.flags),
                         fair_value=fair_value.value,
                         fair_value_source=fair_value.source,
                         listing_price=listing.price,
@@ -391,6 +401,7 @@ class ScannerWindow(QMainWindow):
                 QTableWidgetItem(candidate.issue_number),
                 QTableWidgetItem(f"{candidate.grade:g}" if candidate.grade is not None else ""),
                 QTableWidgetItem(candidate.page_quality or ""),
+                QTableWidgetItem(candidate.listing_flags),
                 MoneyItem(candidate.fair_value),
                 QTableWidgetItem(candidate.fair_value_source),
                 MoneyItem(candidate.listing_price),
@@ -406,7 +417,7 @@ class ScannerWindow(QMainWindow):
         self.results_table.setSortingEnabled(True)
 
     def _open_listing(self, row: int, _column: int) -> None:
-        url_item = self.results_table.item(row, 12)
+        url_item = self.results_table.item(row, 13)
         if url_item and url_item.text():
             QDesktopServices.openUrl(QUrl(url_item.text()))
 
@@ -432,6 +443,7 @@ class ScannerWindow(QMainWindow):
                     "issue_number",
                     "grade",
                     "page_quality",
+                    "listing_flags",
                     "fair_value",
                     "fair_value_source",
                     "listing_price",
@@ -451,6 +463,7 @@ class ScannerWindow(QMainWindow):
                         "issue_number": candidate.issue_number,
                         "grade": candidate.grade,
                         "page_quality": candidate.page_quality,
+                        "listing_flags": candidate.listing_flags,
                         "fair_value": candidate.fair_value,
                         "fair_value_source": candidate.fair_value_source,
                         "listing_price": candidate.listing_price,
