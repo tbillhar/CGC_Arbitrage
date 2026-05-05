@@ -10,4 +10,10 @@ if not exist ".venv\Scripts\python.exe" (
     exit /b 1
 )
 
+if not exist ".env" (
+    if exist ".env.example" (
+        copy ".env.example" ".env" >nul
+    )
+)
+
 ".venv\Scripts\python.exe" "main.py"
