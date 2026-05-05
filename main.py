@@ -32,7 +32,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING, PricingConfig
-from database import CandidateListing, Database, WatchlistItem
+from database import AppSettings, CandidateListing, Database, WatchlistItem
 from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError
 from gocollect_client import GoCollectClient
 from parser import parse_listing_title
@@ -118,6 +118,7 @@ class ScannerWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
         self.resize(1180, 760)
         self._build_ui()
+        self._load_scan_settings()
         self._load_watchlist()
 
     def _build_ui(self) -> None:
@@ -353,6 +354,7 @@ class ScannerWindow(QMainWindow):
 
         candidates: list[CandidateListing] = []
         pricing = self._pricing_config()
+        self._save_scan_settings()
         default_margin = self.default_margin_input.value() / 100
         diagnostics = ScanDiagnostics(
             watchlist_items=len(watchlist),
@@ -452,6 +454,31 @@ class ScannerWindow(QMainWindow):
             default_profit_margin=self.default_margin_input.value() / 100,
         )
 
+    def _load_scan_settings(self) -> None:
+        settings = self.database.get_app_settings()
+        self.selling_fee_input.setValue(self._setting_float(settings, "selling_fee_rate", PRICING.selling_fee_rate) * 100)
+        self.payment_fee_input.setValue(self._setting_float(settings, "payment_fee_rate", PRICING.payment_fee_rate) * 100)
+        self.shipping_cost_input.setValue(self._setting_float(settings, "shipping_cost", PRICING.shipping_cost))
+        self.default_margin_input.setValue(
+            self._setting_float(settings, "default_profit_margin", PRICING.default_profit_margin) * 100
+        )
+
+    def _save_scan_settings(self) -> None:
+        self.database.save_app_settings(
+            AppSettings(
+                selling_fee_rate=self.selling_fee_input.value() / 100,
+                payment_fee_rate=self.payment_fee_input.value() / 100,
+                shipping_cost=self.shipping_cost_input.value(),
+                default_profit_margin=self.default_margin_input.value() / 100,
+            )
+        )
+
+    def _setting_float(self, settings: dict[str, str], key: str, default: float) -> float:
+        try:
+            return float(settings.get(key, default))
+        except (TypeError, ValueError):
+            return default
+
     def _sync_default_margin(self, value: float) -> None:
         if not self.margin_input.hasFocus():
             self.margin_input.setValue(round(value))
@@ -545,6 +572,7 @@ class ScannerWindow(QMainWindow):
         self.status_label.setText(f"Exported {len(self.current_candidates)} candidates to {path}.")
 
     def closeEvent(self, event: Any) -> None:
+        self._save_scan_settings()
         self.database.close()
         super().closeEvent(event)
 

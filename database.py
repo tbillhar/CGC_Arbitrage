@@ -38,6 +38,14 @@ class CandidateListing:
     seller_username: str
 
 
+@dataclass(frozen=True)
+class AppSettings:
+    selling_fee_rate: float
+    payment_fee_rate: float
+    shipping_cost: float
+    default_profit_margin: float
+
+
 class Database:
     def __init__(self, path: Path = DATABASE_PATH) -> None:
         self.path = path
@@ -75,6 +83,11 @@ class Database:
                 source_item_id TEXT NOT NULL,
                 seller_username TEXT NOT NULL DEFAULT '',
                 scanned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS app_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
             );
             """
         )
@@ -131,6 +144,27 @@ class Database:
             "SELECT id, title, issue_number, min_grade, max_grade, target_profit_margin FROM watchlist ORDER BY title"
         ).fetchall()
         return [WatchlistItem(**dict(row)) for row in rows]
+
+    def get_app_settings(self) -> dict[str, str]:
+        rows = self.connection.execute("SELECT key, value FROM app_settings").fetchall()
+        return {str(row["key"]): str(row["value"]) for row in rows}
+
+    def save_app_settings(self, settings: AppSettings) -> None:
+        rows = [
+            ("selling_fee_rate", str(settings.selling_fee_rate)),
+            ("payment_fee_rate", str(settings.payment_fee_rate)),
+            ("shipping_cost", str(settings.shipping_cost)),
+            ("default_profit_margin", str(settings.default_profit_margin)),
+        ]
+        with self.connection:
+            self.connection.executemany(
+                """
+                INSERT INTO app_settings (key, value)
+                VALUES (?, ?)
+                ON CONFLICT(key) DO UPDATE SET value = excluded.value
+                """,
+                rows,
+            )
 
     def replace_scan_results(self, candidates: Iterable[CandidateListing]) -> None:
         with self.connection:
