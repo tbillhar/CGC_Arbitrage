@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
+    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -30,7 +31,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING
+from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING, PricingConfig
 from database import CandidateListing, Database, WatchlistItem
 from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError
 from gocollect_client import GoCollectClient
@@ -72,6 +73,10 @@ class ScanDiagnostics:
     missing_fair_value: int = 0
     unprofitable: int = 0
     candidates: int = 0
+    selling_fee_rate: float = 0.0
+    payment_fee_rate: float = 0.0
+    shipping_cost: float = 0.0
+    default_profit_margin: float = 0.0
     api_errors: list[str] = field(default_factory=list)
 
     def to_text(self) -> str:
@@ -86,6 +91,13 @@ class ScanDiagnostics:
             f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
             f"Skipped: below target profit: {self.unprofitable}",
             f"Candidates shown: {self.candidates}",
+            (
+                "Assumptions: "
+                f"selling fee {self.selling_fee_rate * 100:.2f}%, "
+                f"payment fee {self.payment_fee_rate * 100:.2f}%, "
+                f"shipping ${self.shipping_cost:.2f}, "
+                f"default margin {self.default_profit_margin * 100:.1f}%"
+            ),
         ]
         if self.api_errors:
             lines.append("API/configuration issues:")
@@ -133,6 +145,40 @@ class ScannerWindow(QMainWindow):
         form.addRow("Maximum grade", self.max_grade_input)
         form.addRow("Target profit margin %", self.margin_input)
         layout.addLayout(form)
+
+        settings_group = QGroupBox("Scan settings")
+        settings_form = QFormLayout(settings_group)
+        self.selling_fee_input = QDoubleSpinBox()
+        self.selling_fee_input.setRange(0, 50)
+        self.selling_fee_input.setSingleStep(0.25)
+        self.selling_fee_input.setDecimals(2)
+        self.selling_fee_input.setSuffix("%")
+        self.selling_fee_input.setValue(PRICING.selling_fee_rate * 100)
+        self.payment_fee_input = QDoubleSpinBox()
+        self.payment_fee_input.setRange(0, 20)
+        self.payment_fee_input.setSingleStep(0.25)
+        self.payment_fee_input.setDecimals(2)
+        self.payment_fee_input.setSuffix("%")
+        self.payment_fee_input.setValue(PRICING.payment_fee_rate * 100)
+        self.shipping_cost_input = QDoubleSpinBox()
+        self.shipping_cost_input.setRange(0, 500)
+        self.shipping_cost_input.setSingleStep(1)
+        self.shipping_cost_input.setDecimals(2)
+        self.shipping_cost_input.setPrefix("$")
+        self.shipping_cost_input.setValue(PRICING.shipping_cost)
+        self.default_margin_input = QDoubleSpinBox()
+        self.default_margin_input.setRange(0, 95)
+        self.default_margin_input.setSingleStep(1)
+        self.default_margin_input.setDecimals(1)
+        self.default_margin_input.setSuffix("%")
+        self.default_margin_input.setValue(PRICING.default_profit_margin * 100)
+        self.default_margin_input.valueChanged.connect(self._sync_default_margin)
+
+        settings_form.addRow("Selling fee", self.selling_fee_input)
+        settings_form.addRow("Payment fee", self.payment_fee_input)
+        settings_form.addRow("Shipping cost", self.shipping_cost_input)
+        settings_form.addRow("Default margin", self.default_margin_input)
+        layout.addWidget(settings_group)
 
         button_row = QHBoxLayout()
         add_button = QPushButton("Add to watchlist")
@@ -306,7 +352,15 @@ class ScannerWindow(QMainWindow):
             return
 
         candidates: list[CandidateListing] = []
-        diagnostics = ScanDiagnostics(watchlist_items=len(watchlist))
+        pricing = self._pricing_config()
+        default_margin = self.default_margin_input.value() / 100
+        diagnostics = ScanDiagnostics(
+            watchlist_items=len(watchlist),
+            selling_fee_rate=pricing.selling_fee_rate,
+            payment_fee_rate=pricing.payment_fee_rate,
+            shipping_cost=pricing.shipping_cost,
+            default_profit_margin=default_margin,
+        )
         for item in watchlist:
             self.status_label.setText(f"Scanning {item.title} #{item.issue_number}...")
             QApplication.processEvents()
@@ -345,7 +399,8 @@ class ScannerWindow(QMainWindow):
                 if fair_value is None:
                     diagnostics.missing_fair_value += 1
                     continue
-                deal = calculate_deal(fair_value.value, listing.price, item.target_profit_margin)
+                target_margin = item.target_profit_margin if item.target_profit_margin > 0 else default_margin
+                deal = calculate_deal(fair_value.value, listing.price, target_margin, pricing)
                 if not deal.is_candidate:
                     diagnostics.unprofitable += 1
                     continue
@@ -388,6 +443,18 @@ class ScannerWindow(QMainWindow):
         except ValueError as error:
             QMessageBox.warning(self, APP_NAME, str(error))
             return None
+
+    def _pricing_config(self) -> PricingConfig:
+        return PricingConfig(
+            selling_fee_rate=self.selling_fee_input.value() / 100,
+            payment_fee_rate=self.payment_fee_input.value() / 100,
+            shipping_cost=self.shipping_cost_input.value(),
+            default_profit_margin=self.default_margin_input.value() / 100,
+        )
+
+    def _sync_default_margin(self, value: float) -> None:
+        if not self.margin_input.hasFocus():
+            self.margin_input.setValue(round(value))
 
     def _render_candidates(self, candidates: list[CandidateListing]) -> None:
         self.results_table.setSortingEnabled(False)
