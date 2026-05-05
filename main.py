@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import csv
 import sys
 from typing import Any
 
@@ -26,7 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from config import APP_NAME, PRICING
+from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING
 from database import CandidateListing, Database, WatchlistItem
 from ebay_client import EbayClient
 from gocollect_client import GoCollectClient
@@ -97,12 +98,15 @@ class ScannerWindow(QMainWindow):
 
         button_row = QHBoxLayout()
         add_button = QPushButton("Add to watchlist")
+        import_button = QPushButton("Load liquid list")
         delete_button = QPushButton("Remove selected")
         scan_button = QPushButton("Scan watchlist")
         add_button.clicked.connect(self._add_watchlist_item)
+        import_button.clicked.connect(self._import_preset_watchlist)
         delete_button.clicked.connect(self._delete_selected_watchlist_item)
         scan_button.clicked.connect(self._scan_watchlist)
         button_row.addWidget(add_button)
+        button_row.addWidget(import_button)
         button_row.addWidget(delete_button)
         button_row.addStretch(1)
         button_row.addWidget(scan_button)
@@ -167,6 +171,58 @@ class ScannerWindow(QMainWindow):
         self.title_input.clear()
         self.issue_input.clear()
         self._load_watchlist()
+
+    def _import_preset_watchlist(self) -> None:
+        if not PRESET_WATCHLIST_PATH.exists():
+            QMessageBox.warning(self, APP_NAME, f"Preset list not found: {PRESET_WATCHLIST_PATH}")
+            return
+
+        try:
+            items = self._read_preset_watchlist()
+        except ValueError as error:
+            QMessageBox.warning(self, APP_NAME, str(error))
+            return
+
+        imported_count = self.database.add_watchlist_items(items)
+        self._load_watchlist()
+        self.status_label.setText(
+            f"Imported {imported_count} liquid list rows. {len(items) - imported_count} duplicates skipped."
+        )
+
+    def _read_preset_watchlist(self) -> list[WatchlistItem]:
+        required_columns = {"title", "issue_number", "min_grade", "max_grade", "target_profit_margin"}
+        with PRESET_WATCHLIST_PATH.open("r", newline="", encoding="utf-8-sig") as file:
+            reader = csv.DictReader(file)
+            if not reader.fieldnames or not required_columns.issubset(set(reader.fieldnames)):
+                missing = ", ".join(sorted(required_columns - set(reader.fieldnames or [])))
+                raise ValueError(f"Preset list is missing required columns: {missing}")
+
+            items: list[WatchlistItem] = []
+            for line_number, row in enumerate(reader, start=2):
+                title = (row.get("title") or "").strip()
+                issue_number = (row.get("issue_number") or "").strip()
+                if not title or not issue_number:
+                    raise ValueError(f"Preset list row {line_number} must include title and issue_number.")
+                try:
+                    min_grade = float(row["min_grade"])
+                    max_grade = float(row["max_grade"])
+                    target_profit_margin = float(row["target_profit_margin"])
+                except (TypeError, ValueError) as error:
+                    raise ValueError(f"Preset list row {line_number} contains invalid numeric values.") from error
+                if min_grade > max_grade:
+                    raise ValueError(f"Preset list row {line_number} has min_grade above max_grade.")
+
+                items.append(
+                    WatchlistItem(
+                        id=None,
+                        title=title,
+                        issue_number=issue_number,
+                        min_grade=min_grade,
+                        max_grade=max_grade,
+                        target_profit_margin=target_profit_margin,
+                    )
+                )
+        return items
 
     def _delete_selected_watchlist_item(self) -> None:
         selected = self.watchlist_table.selectionModel().selectedRows()

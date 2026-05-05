@@ -10,6 +10,9 @@ from pathlib import Path
 APP_NAME = "CGC Slab Arbitrage Scanner"
 APP_DIR = Path(os.getenv("CGC_ARBITRAGE_APP_DIR", Path.home() / ".cgc_arbitrage"))
 DATABASE_PATH = Path(os.getenv("CGC_ARBITRAGE_DB", APP_DIR / "scanner.sqlite3"))
+PRESET_WATCHLIST_PATH = Path(
+    os.getenv("CGC_PRESET_WATCHLIST", Path(__file__).with_name("liquid_titles.csv"))
+)
 
 
 @dataclass(frozen=True)

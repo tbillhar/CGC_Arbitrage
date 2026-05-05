@@ -85,6 +85,34 @@ class Database:
         self.connection.commit()
         return int(cursor.lastrowid)
 
+    def add_watchlist_items(self, items: Iterable[WatchlistItem]) -> int:
+        existing = {
+            self._watchlist_key(item)
+            for item in self.get_watchlist()
+        }
+        rows_to_insert = []
+        for item in items:
+            key = self._watchlist_key(item)
+            if key in existing:
+                continue
+            existing.add(key)
+            rows_to_insert.append(
+                (item.title, item.issue_number, item.min_grade, item.max_grade, item.target_profit_margin)
+            )
+
+        if not rows_to_insert:
+            return 0
+
+        with self.connection:
+            self.connection.executemany(
+                """
+                INSERT INTO watchlist (title, issue_number, min_grade, max_grade, target_profit_margin)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                rows_to_insert,
+            )
+        return len(rows_to_insert)
+
     def delete_watchlist_item(self, item_id: int) -> None:
         self.connection.execute("DELETE FROM watchlist WHERE id = ?", (item_id,))
         self.connection.commit()
@@ -126,3 +154,12 @@ class Database:
 
     def close(self) -> None:
         self.connection.close()
+
+    def _watchlist_key(self, item: WatchlistItem) -> tuple[str, str, float, float, float]:
+        return (
+            item.title.strip().casefold(),
+            item.issue_number.strip().casefold(),
+            round(item.min_grade, 1),
+            round(item.max_grade, 1),
+            round(item.target_profit_margin, 4),
+        )
