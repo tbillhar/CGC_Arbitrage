@@ -31,7 +31,7 @@ from PySide6.QtWidgets import (
 
 from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING
 from database import CandidateListing, Database, WatchlistItem
-from ebay_client import EbayApiError, EbayClient, EbayCredentialsMissingError
+from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError
 from gocollect_client import GoCollectClient
 from parser import parse_listing_title
 from valuation import FairValue, LocalFairValueProvider, calculate_deal
@@ -306,6 +306,9 @@ class ScannerWindow(QMainWindow):
                     item.max_grade,
                 )
             except EbayCredentialsMissingError as error:
+                diagnostics.api_errors.append(str(error))
+                break
+            except EbayAuthError as error:
                 diagnostics.api_errors.append(str(error))
                 break
             except EbayApiError as error:

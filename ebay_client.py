@@ -35,6 +35,10 @@ class EbayApiError(RuntimeError):
     pass
 
 
+class EbayAuthError(EbayApiError):
+    pass
+
+
 class EbayClient:
     def __init__(self, config: EbayConfig = EBAY) -> None:
         self.config = config
@@ -112,6 +116,12 @@ class EbayClient:
             with urlopen(request, timeout=20) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
-            raise EbayApiError(f"eBay OAuth request failed: {error}") from error
+            raise EbayAuthError(
+                "eBay OAuth request failed. Check that EBAY_CLIENT_ID and "
+                "EBAY_CLIENT_SECRET are from the same eBay environment as the "
+                "configured OAuth/Browse URLs, and that there are no extra "
+                "spaces or quotes in the environment variables. "
+                f"Underlying error: {error}"
+            ) from error
         self._access_token = str(payload["access_token"])
         return self._access_token
