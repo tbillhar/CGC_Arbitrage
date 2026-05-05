@@ -32,7 +32,7 @@ from database import CandidateListing, Database, WatchlistItem
 from ebay_client import EbayClient
 from gocollect_client import GoCollectClient
 from parser import parse_listing_title
-from valuation import calculate_deal
+from valuation import FairValue, LocalFairValueProvider, calculate_deal
 
 
 class MoneyItem(QTableWidgetItem):
@@ -63,6 +63,7 @@ class ScannerWindow(QMainWindow):
         self.database = Database()
         self.ebay = EbayClient()
         self.gocollect = GoCollectClient()
+        self.local_values = LocalFairValueProvider()
         self.url_by_row: dict[int, str] = {}
 
         self.setWindowTitle(APP_NAME)
@@ -269,7 +270,7 @@ class ScannerWindow(QMainWindow):
                 parsed = parse_listing_title(listing.title)
                 if parsed.grade is None or not (item.min_grade <= parsed.grade <= item.max_grade):
                     continue
-                fair_value = self.gocollect.fetch_fair_value(item.title, item.issue_number, parsed.grade)
+                fair_value = self._fetch_fair_value(item.title, item.issue_number, parsed.grade)
                 if fair_value is None:
                     continue
                 deal = calculate_deal(fair_value.value, listing.price, item.target_profit_margin)
@@ -294,6 +295,17 @@ class ScannerWindow(QMainWindow):
         self.database.replace_scan_results(candidates)
         self._render_candidates(candidates)
         self.status_label.setText(f"Scan complete. {len(candidates)} candidates found.")
+
+    def _fetch_fair_value(self, title: str, issue_number: str, grade: float) -> FairValue | None:
+        fair_value = self.gocollect.fetch_fair_value(title, issue_number, grade)
+        if fair_value is not None:
+            return fair_value
+
+        try:
+            return self.local_values.fetch_fair_value(title, issue_number, grade)
+        except ValueError as error:
+            QMessageBox.warning(self, APP_NAME, str(error))
+            return None
 
     def _render_candidates(self, candidates: list[CandidateListing]) -> None:
         self.results_table.setSortingEnabled(False)

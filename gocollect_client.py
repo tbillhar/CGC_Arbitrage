@@ -2,19 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Optional
 
 from config import GOCOLLECT, GoCollectConfig
-
-
-@dataclass(frozen=True)
-class FairValue:
-    title: str
-    issue_number: str
-    grade: float
-    value: float
-    source: str
+from valuation import FairValue
 
 
 class GoCollectClient:

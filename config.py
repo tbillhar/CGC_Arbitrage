@@ -13,6 +13,9 @@ DATABASE_PATH = Path(os.getenv("CGC_ARBITRAGE_DB", APP_DIR / "scanner.sqlite3"))
 PRESET_WATCHLIST_PATH = Path(
     os.getenv("CGC_PRESET_WATCHLIST", Path(__file__).with_name("liquid_titles.csv"))
 )
+LOCAL_FAIR_VALUES_PATH = Path(
+    os.getenv("CGC_LOCAL_FAIR_VALUES", Path(__file__).with_name("fair_values.csv"))
+)
 
 
 @dataclass(frozen=True)

@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Optional
 
-from config import PRICING, PricingConfig
+from config import LOCAL_FAIR_VALUES_PATH, PRICING, PricingConfig
+
+
+@dataclass(frozen=True)
+class FairValue:
+    title: str
+    issue_number: str
+    grade: float
+    value: float
+    source: str
 
 
 @dataclass(frozen=True)
@@ -19,6 +31,60 @@ class DealMath:
     estimated_profit: float
     estimated_margin: float
     is_candidate: bool
+
+
+class LocalFairValueProvider:
+    def __init__(self, path: Path = LOCAL_FAIR_VALUES_PATH) -> None:
+        self.path = path
+        self._values: dict[tuple[str, str, float], FairValue] | None = None
+
+    def fetch_fair_value(self, title: str, issue_number: str, grade: float) -> Optional[FairValue]:
+        values = self._load_values()
+        return values.get(self._key(title, issue_number, grade))
+
+    def _load_values(self) -> dict[tuple[str, str, float], FairValue]:
+        if self._values is not None:
+            return self._values
+
+        self._values = {}
+        if not self.path.exists():
+            return self._values
+
+        required_columns = {"title", "issue_number", "grade", "fair_value"}
+        with self.path.open("r", newline="", encoding="utf-8-sig") as file:
+            reader = csv.DictReader(file)
+            if not reader.fieldnames or not required_columns.issubset(set(reader.fieldnames)):
+                missing = ", ".join(sorted(required_columns - set(reader.fieldnames or [])))
+                raise ValueError(f"Local fair-value file is missing required columns: {missing}")
+
+            for line_number, row in enumerate(reader, start=2):
+                title = (row.get("title") or "").strip()
+                issue_number = (row.get("issue_number") or "").strip()
+                if not title or not issue_number:
+                    raise ValueError(
+                        f"Local fair-value file row {line_number} must include title and issue_number."
+                    )
+                try:
+                    grade = float(row["grade"])
+                    value = float(row["fair_value"])
+                except (TypeError, ValueError) as error:
+                    raise ValueError(
+                        f"Local fair-value file row {line_number} contains invalid numeric values."
+                    ) from error
+
+                fair_value = FairValue(
+                    title=title,
+                    issue_number=issue_number,
+                    grade=grade,
+                    value=value,
+                    source="local_csv",
+                )
+                self._values[self._key(title, issue_number, grade)] = fair_value
+
+        return self._values
+
+    def _key(self, title: str, issue_number: str, grade: float) -> tuple[str, str, float]:
+        return (title.strip().casefold(), issue_number.strip().casefold(), round(grade, 1))
 
 
 def calculate_deal(
