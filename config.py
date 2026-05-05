@@ -7,6 +7,23 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+def load_dotenv(path: Path = Path(__file__).with_name(".env")) -> None:
+    if not path.exists():
+        return
+
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip('"').strip("'")
+        if key and key not in os.environ:
+            os.environ[key] = value
+
+
+load_dotenv()
+
 APP_NAME = "CGC Slab Arbitrage Scanner"
 APP_DIR = Path(os.getenv("CGC_ARBITRAGE_APP_DIR", Path.home() / ".cgc_arbitrage"))
 DATABASE_PATH = Path(os.getenv("CGC_ARBITRAGE_DB", APP_DIR / "scanner.sqlite3"))
