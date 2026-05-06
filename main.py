@@ -66,6 +66,7 @@ class ScanDiagnostics:
     watchlist_items: int = 0
     ebay_queries: int = 0
     listings_found: int = 0
+    missing_price: int = 0
     not_slabbed: int = 0
     missing_grade: int = 0
     slabbed_missing_grade: int = 0
@@ -84,6 +85,7 @@ class ScanDiagnostics:
             f"Watchlist rows scanned: {self.watchlist_items}",
             f"eBay searches attempted: {self.ebay_queries}",
             f"eBay listings returned: {self.listings_found}",
+            f"Skipped: no usable price: {self.missing_price}",
             f"Skipped: not slabbed: {self.not_slabbed}",
             f"Skipped: no parsed CGC grade: {self.missing_grade}",
             f"Skipped: slabbed but no parsed grade: {self.slabbed_missing_grade}",
@@ -386,6 +388,9 @@ class ScannerWindow(QMainWindow):
 
             diagnostics.listings_found += len(listings)
             for listing in listings:
+                if listing.price <= 0:
+                    diagnostics.missing_price += 1
+                    continue
                 parsed = parse_listing_title(listing.title)
                 if parsed.grade is None:
                     if parsed.is_slabbed:

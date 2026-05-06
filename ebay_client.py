@@ -122,21 +122,28 @@ class EbayClient:
 
     def _parse_item_summaries(self, items: Iterable[dict[str, Any]]) -> Iterable[EbayListing]:
         for item in items:
-            price = item.get("price") or {}
+            price_value, currency = self._item_price(item)
             seller = item.get("seller") or {}
-            try:
-                value = float(price.get("value", 0))
-            except (TypeError, ValueError):
-                value = 0.0
 
             yield EbayListing(
                 item_id=str(item.get("itemId", "")),
                 title=str(item.get("title", "")),
-                price=value,
-                currency=str(price.get("currency", "USD")),
+                price=price_value,
+                currency=currency,
                 item_url=str(item.get("itemWebUrl", "")),
                 seller_username=str(seller.get("username", "")),
             )
+
+    def _item_price(self, item: dict[str, Any]) -> tuple[float, str]:
+        for field_name in ("price", "currentBidPrice", "minimumPriceToBid"):
+            price = item.get(field_name) or {}
+            try:
+                value = float(price.get("value", 0))
+            except (TypeError, ValueError):
+                value = 0.0
+            if value > 0:
+                return value, str(price.get("currency", "USD"))
+        return 0.0, "USD"
 
     def _get_json(self, url: str) -> dict[str, Any]:
         token = self._access_token or self._fetch_access_token()

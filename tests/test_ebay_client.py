@@ -41,3 +41,24 @@ def test_mock_mode_reports_bad_price(tmp_path: Path) -> None:
 
     with pytest.raises(EbayApiError, match="invalid price"):
         client.search_active_listings("Amazing Spider-Man", "300", 8.0, 9.8)
+
+
+def test_item_summary_uses_current_bid_price_when_price_is_absent() -> None:
+    client = EbayClient(EbayConfig(mode="mock"))
+
+    listings = list(
+        client._parse_item_summaries(
+            [
+                {
+                    "itemId": "auction-1",
+                    "title": "Amazing Spider-Man #300 CGC 9.8 White Pages",
+                    "currentBidPrice": {"value": "1275.50", "currency": "USD"},
+                    "itemWebUrl": "https://example.test/auction-1",
+                    "seller": {"username": "auction_seller"},
+                }
+            ]
+        )
+    )
+
+    assert listings[0].price == 1275.50
+    assert listings[0].currency == "USD"
