@@ -9,11 +9,15 @@ from __future__ import annotations
 import base64
 import csv
 import json
+import ssl
 from dataclasses import dataclass
 from typing import Any, Iterable
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+import certifi
+import truststore
 
 from config import EBAY, EbayConfig
 
@@ -44,6 +48,7 @@ class EbayClient:
     def __init__(self, config: EbayConfig = EBAY) -> None:
         self.config = config
         self._access_token: str | None = None
+        self._ssl_context = self._create_ssl_context()
 
     @property
     def has_credentials(self) -> bool:
@@ -144,7 +149,7 @@ class EbayClient:
             },
         )
         try:
-            with urlopen(request, timeout=20) as response:
+            with urlopen(request, timeout=20, context=self._ssl_context) as response:
                 return json.loads(response.read().decode("utf-8"))
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             raise EbayApiError(f"eBay Browse API request failed: {error}") from error
@@ -161,7 +166,7 @@ class EbayClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=20) as response:
+            with urlopen(request, timeout=20, context=self._ssl_context) as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             raise EbayAuthError(
@@ -173,3 +178,9 @@ class EbayClient:
             ) from error
         self._access_token = str(payload["access_token"])
         return self._access_token
+
+    def _create_ssl_context(self) -> ssl.SSLContext:
+        try:
+            return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        except Exception:
+            return ssl.create_default_context(cafile=certifi.where())
