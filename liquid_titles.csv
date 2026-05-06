@@ -1,11 +1,39 @@
 title,issue_number,min_grade,max_grade,target_profit_margin
-Amazing Spider-Man,300,8.0,9.8,0.20
-Amazing Spider-Man,361,9.0,9.8,0.20
-New Mutants,98,9.0,9.8,0.18
-Batman Adventures,12,8.0,9.8,0.20
-Incredible Hulk,181,5.0,9.4,0.22
-X-Men,266,9.0,9.8,0.18
-Secret Wars,8,9.0,9.8,0.18
-Teenage Mutant Ninja Turtles Adventures,1,8.5,9.8,0.20
-Spawn,1,9.4,9.8,0.15
-Ultimate Fallout,4,9.0,9.8,0.18
+Amazing Spider-Man,121,5,8,0.2
+Amazing Spider-Man,122,5,8,0.2
+Amazing Spider-Man,46,5,8,0.2
+Amazing Spider-Man,50,5,8,0.2
+Amazing Spider-Man,51,5,8,0.2
+Amazing Spider-Man,2,5,8,0.2
+Amazing Spider-Man,3,5,8,0.2
+Amazing Spider-Man,4,5,8,0.2
+Fantastic Four,48,5,8,0.2
+Fantastic Four,49,5,8,0.2
+Fantastic Four,50,5,8,0.2
+Fantastic Four,52,5,8,0.2
+Fantastic Four,57,5,8,0.2
+Fantastic Four,2,5,8,0.2
+Fantastic Four,3,5,8,0.2
+Fantastic Four,4,5,8,0.2
+Iron Man,1,5,8,0.2
+Iron Man,55,5,8,0.2
+Thor,165,5,8,0.2
+Avengers,57,5,8,0.2
+Avengers,2,5,8,0.2
+Avengers,3,5,8,0.2
+Avengers,4,5,8,0.2
+Avengers,5,5,8,0.2
+Avengers,6,5,8,0.2
+Incredible Hulk,181,5,8,0.2
+Strange Tales,110,5,8,0.2
+Daredevil,1,5,8,0.2
+X-Men,94,5,8,0.2
+X-Men,95,5,8,0.2
+X-Men,101,5,8,0.2
+X-Men,1,5,8,0.2
+X-Men,2,5,8,0.2
+X-Men,3,5,8,0.2
+X-Men,4,5,8,0.2
+X-Men,5,5,8,0.2
+X-Men,6,5,8,0.2
+X-Men,7,5,8,0.2
