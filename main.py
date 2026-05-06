@@ -35,7 +35,7 @@ from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING, PricingConfig
 from database import AppSettings, CandidateListing, Database, WatchlistItem
 from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError
 from gocollect_client import GoCollectClient
-from parser import parse_listing_title
+from parser import DEAL_BREAKER_FLAGS, parse_listing_title
 from valuation import FairValue, LocalFairValueProvider, calculate_deal
 
 
@@ -70,6 +70,8 @@ class ScanDiagnostics:
     not_slabbed: int = 0
     missing_grade: int = 0
     slabbed_missing_grade: int = 0
+    issue_mismatch: int = 0
+    deal_breaker_flags: int = 0
     grade_out_of_range: int = 0
     missing_fair_value: int = 0
     unprofitable: int = 0
@@ -89,6 +91,8 @@ class ScanDiagnostics:
             f"Skipped: not slabbed: {self.not_slabbed}",
             f"Skipped: no parsed CGC grade: {self.missing_grade}",
             f"Skipped: slabbed but no parsed grade: {self.slabbed_missing_grade}",
+            f"Skipped: issue mismatch: {self.issue_mismatch}",
+            f"Skipped: qualified/restored/incomplete: {self.deal_breaker_flags}",
             f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
             f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
             f"Skipped: below target profit: {self.unprofitable}",
@@ -392,12 +396,18 @@ class ScannerWindow(QMainWindow):
                     diagnostics.missing_price += 1
                     continue
                 parsed = parse_listing_title(listing.title)
+                if parsed.issue_number and not self._issue_matches(item.issue_number, parsed.issue_number):
+                    diagnostics.issue_mismatch += 1
+                    continue
                 if parsed.grade is None:
                     if parsed.is_slabbed:
                         diagnostics.slabbed_missing_grade += 1
                     else:
                         diagnostics.not_slabbed += 1
                     diagnostics.missing_grade += 1
+                    continue
+                if DEAL_BREAKER_FLAGS.intersection(parsed.flags):
+                    diagnostics.deal_breaker_flags += 1
                     continue
                 if not (item.min_grade <= parsed.grade <= item.max_grade):
                     diagnostics.grade_out_of_range += 1
@@ -483,6 +493,12 @@ class ScannerWindow(QMainWindow):
             return float(settings.get(key, default))
         except (TypeError, ValueError):
             return default
+
+    def _issue_matches(self, watch_issue: str, parsed_issue: str) -> bool:
+        return self._normalize_issue(watch_issue) == self._normalize_issue(parsed_issue)
+
+    def _normalize_issue(self, issue_number: str) -> str:
+        return issue_number.strip().casefold().replace("#", "").replace(" ", "")
 
     def _sync_default_margin(self, value: float) -> None:
         if not self.margin_input.hasFocus():

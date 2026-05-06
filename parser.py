@@ -26,7 +26,13 @@ FLAG_PATTERNS = {
     "canadian_price_variant": re.compile(r"\b(CPV|canadian price variant)\b", re.IGNORECASE),
     "variant": re.compile(r"\bvariant\b", re.IGNORECASE),
     "first_appearance": re.compile(r"\b(1st|first appearance)\b", re.IGNORECASE),
+    "qualified": re.compile(r"\b(qualified|cgc q|cgc .*?\(q\)|\(q\))\b", re.IGNORECASE),
+    "restored": re.compile(r"\b(restored|restoration|cgc r|cgc .*?\(r\)|\(r\))\b", re.IGNORECASE),
+    "incomplete": re.compile(r"\b(incomplete|missing page|missing pages|cut coupon)\b", re.IGNORECASE),
+    "missing_mvs": re.compile(r"\b(missing mvs|mvs missing|missing marvel value stamp)\b", re.IGNORECASE),
 }
+
+DEAL_BREAKER_FLAGS = frozenset({"qualified", "restored", "incomplete", "missing_mvs"})
 
 
 @dataclass(frozen=True)

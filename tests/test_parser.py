@@ -1,4 +1,4 @@
-from parser import parse_listing_title
+from parser import DEAL_BREAKER_FLAGS, parse_listing_title
 
 
 def test_parse_cgc_grade_issue_and_white_pages() -> None:
@@ -58,3 +58,13 @@ def test_parse_canadian_price_variant_flag() -> None:
     assert parsed.issue_number == "252"
     assert parsed.grade == 9.6
     assert "canadian_price_variant" in parsed.flags
+
+
+def test_parse_qualified_and_missing_mvs_flags() -> None:
+    parsed = parse_listing_title("Incredible Hulk #181 CGC 8.0 Qualified Missing MVS")
+
+    assert parsed.issue_number == "181"
+    assert parsed.grade == 8.0
+    assert "qualified" in parsed.flags
+    assert "missing_mvs" in parsed.flags
+    assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)
