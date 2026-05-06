@@ -10,6 +10,7 @@ import base64
 import csv
 import json
 import ssl
+import time
 from dataclasses import dataclass
 from typing import Any, Iterable
 from urllib.error import HTTPError, URLError
@@ -156,9 +157,8 @@ class EbayClient:
             },
         )
         try:
-            with urlopen(request, timeout=20, context=self._ssl_context) as response:
-                return json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
+            return self._request_json(request)
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, OSError) as error:
             raise EbayApiError(f"eBay Browse API request failed: {error}") from error
 
     def _fetch_access_token(self) -> str:
@@ -173,9 +173,8 @@ class EbayClient:
             method="POST",
         )
         try:
-            with urlopen(request, timeout=20, context=self._ssl_context) as response:
-                payload = json.loads(response.read().decode("utf-8"))
-        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
+            payload = self._request_json(request)
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError, OSError) as error:
             raise EbayAuthError(
                 "eBay OAuth request failed. Check that EBAY_CLIENT_ID and "
                 "EBAY_CLIENT_SECRET are from the same eBay environment as the "
@@ -185,6 +184,21 @@ class EbayClient:
             ) from error
         self._access_token = str(payload["access_token"])
         return self._access_token
+
+    def _request_json(self, request: Request, attempts: int = 3) -> dict[str, Any]:
+        last_error: Exception | None = None
+        for attempt in range(attempts):
+            try:
+                with urlopen(request, timeout=20, context=self._ssl_context) as response:
+                    return json.loads(response.read().decode("utf-8"))
+            except HTTPError:
+                raise
+            except (URLError, TimeoutError, OSError) as error:
+                last_error = error
+                if attempt == attempts - 1:
+                    break
+                time.sleep(0.5 * (attempt + 1))
+        raise last_error or EbayApiError("eBay request failed without an error.")
 
     def _create_ssl_context(self) -> ssl.SSLContext:
         try:

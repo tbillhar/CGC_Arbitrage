@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.error import URLError
 
 import pytest
 
@@ -62,3 +63,31 @@ def test_item_summary_uses_current_bid_price_when_price_is_absent() -> None:
 
     assert listings[0].price == 1275.50
     assert listings[0].currency == "USD"
+
+
+def test_request_json_retries_transient_url_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = EbayClient(EbayConfig(mode="mock"))
+    calls = 0
+
+    class FakeResponse:
+        def __enter__(self) -> "FakeResponse":
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            return None
+
+        def read(self) -> bytes:
+            return b'{"ok": true}'
+
+    def fake_urlopen(*args: object, **kwargs: object) -> FakeResponse:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise URLError("connection reset")
+        return FakeResponse()
+
+    monkeypatch.setattr("ebay_client.urlopen", fake_urlopen)
+    monkeypatch.setattr("ebay_client.time.sleep", lambda seconds: None)
+
+    assert client._request_json(object()) == {"ok": True}
+    assert calls == 2
