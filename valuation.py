@@ -40,7 +40,10 @@ class LocalFairValueProvider:
 
     def fetch_fair_value(self, title: str, issue_number: str, grade: float) -> Optional[FairValue]:
         values = self._load_values()
-        return values.get(self._key(title, issue_number, grade))
+        exact_value = values.get(self._key(title, issue_number, grade))
+        if exact_value is not None:
+            return exact_value
+        return self._interpolated_value(title, issue_number, grade, values)
 
     def _load_values(self) -> dict[tuple[str, str, float], FairValue]:
         if self._values is not None:
@@ -85,6 +88,37 @@ class LocalFairValueProvider:
 
     def _key(self, title: str, issue_number: str, grade: float) -> tuple[str, str, float]:
         return (title.strip().casefold(), issue_number.strip().casefold(), round(grade, 1))
+
+    def _interpolated_value(
+        self,
+        title: str,
+        issue_number: str,
+        grade: float,
+        values: dict[tuple[str, str, float], FairValue],
+    ) -> Optional[FairValue]:
+        title_key = title.strip().casefold()
+        issue_key = issue_number.strip().casefold()
+        matching_values = sorted(
+            (
+                fair_value
+                for key, fair_value in values.items()
+                if key[0] == title_key and key[1] == issue_key
+            ),
+            key=lambda fair_value: fair_value.grade,
+        )
+        for lower, upper in zip(matching_values, matching_values[1:]):
+            if lower.grade < grade < upper.grade:
+                grade_span = upper.grade - lower.grade
+                value_span = upper.value - lower.value
+                interpolated = lower.value + ((grade - lower.grade) / grade_span) * value_span
+                return FairValue(
+                    title=lower.title,
+                    issue_number=lower.issue_number,
+                    grade=grade,
+                    value=round(interpolated, 2),
+                    source="local_csv_interpolated",
+                )
+        return None
 
 
 def calculate_deal(

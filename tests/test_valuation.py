@@ -39,3 +39,19 @@ def test_local_fair_value_provider_matches_case_insensitive_title(tmp_path: Path
     assert fair_value is not None
     assert fair_value.value == 6500
     assert fair_value.source == "local_csv"
+
+
+def test_local_fair_value_provider_interpolates_between_known_grades(tmp_path: Path) -> None:
+    values_file = tmp_path / "fair_values.csv"
+    values_file.write_text(
+        "title,issue_number,grade,fair_value\n"
+        "Amazing Spider-Man,121,5.0,700\n"
+        "Amazing Spider-Man,121,6.0,900\n",
+        encoding="utf-8",
+    )
+
+    fair_value = LocalFairValueProvider(values_file).fetch_fair_value("Amazing Spider-Man", "121", 5.5)
+
+    assert fair_value is not None
+    assert fair_value.value == 800
+    assert fair_value.source == "local_csv_interpolated"
