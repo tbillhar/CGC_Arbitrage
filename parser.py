@@ -40,9 +40,24 @@ FLAG_PATTERNS = {
     "missing_mvs": re.compile(r"\b(missing mvs|mvs missing|missing marvel value stamp)\b", re.IGNORECASE),
     "not_cgc": re.compile(r"\b(not cgc|raw|cgc worthy|ready for cgc|cgc candidate)\b", re.IGNORECASE),
     "modern_year": re.compile(r"\b(198[0-9]|199[0-9]|20[0-9]{2})\b", re.IGNORECASE),
+    "later_volume": re.compile(r"\b(v2|vol\.?\s*2|volume\s*2|2nd series|second series)\b", re.IGNORECASE),
+    "annual": re.compile(r"\bannual\b", re.IGNORECASE),
+    "reprint": re.compile(r"\b(reprint|facsimile|true believers|marvel tales|golden record|special edition)\b", re.IGNORECASE),
 }
 
-DEAL_BREAKER_FLAGS = frozenset({"qualified", "restored", "incomplete", "missing_mvs", "not_cgc", "modern_year"})
+DEAL_BREAKER_FLAGS = frozenset(
+    {
+        "qualified",
+        "restored",
+        "incomplete",
+        "missing_mvs",
+        "not_cgc",
+        "modern_year",
+        "later_volume",
+        "annual",
+        "reprint",
+    }
+)
 
 
 @dataclass(frozen=True)

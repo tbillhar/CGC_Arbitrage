@@ -70,6 +70,7 @@ class ScanDiagnostics:
     not_slabbed: int = 0
     missing_grade: int = 0
     slabbed_missing_grade: int = 0
+    title_mismatch: int = 0
     issue_mismatch: int = 0
     deal_breaker_flags: int = 0
     grade_out_of_range: int = 0
@@ -91,6 +92,7 @@ class ScanDiagnostics:
             f"Skipped: not slabbed: {self.not_slabbed}",
             f"Skipped: no parsed CGC grade: {self.missing_grade}",
             f"Skipped: slabbed but no parsed grade: {self.slabbed_missing_grade}",
+            f"Skipped: title mismatch: {self.title_mismatch}",
             f"Skipped: issue mismatch: {self.issue_mismatch}",
             f"Skipped: qualified/restored/incomplete: {self.deal_breaker_flags}",
             f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
@@ -395,6 +397,9 @@ class ScannerWindow(QMainWindow):
                 if listing.price <= 0:
                     diagnostics.missing_price += 1
                     continue
+                if not self._title_matches(item.title, listing.title):
+                    diagnostics.title_mismatch += 1
+                    continue
                 parsed = parse_listing_title(listing.title)
                 if parsed.issue_number and not self._issue_matches(item.issue_number, parsed.issue_number):
                     diagnostics.issue_mismatch += 1
@@ -499,6 +504,32 @@ class ScannerWindow(QMainWindow):
 
     def _normalize_issue(self, issue_number: str) -> str:
         return issue_number.strip().casefold().replace("#", "").replace(" ", "")
+
+    def _title_matches(self, watch_title: str, listing_title: str) -> bool:
+        normalized_listing = self._normalize_title(listing_title)
+        aliases = {
+            "amazing spider-man": ("amazing spider man", "asm"),
+            "fantastic four": ("fantastic four", "ff"),
+            "iron man": ("iron man",),
+            "thor": ("thor",),
+            "avengers": ("avengers",),
+            "incredible hulk": ("incredible hulk", "hulk"),
+            "strange tales": ("strange tales",),
+            "daredevil": ("daredevil",),
+            "x-men": ("x men", "xmen", "uncanny x men"),
+        }
+        title_key = watch_title.strip().casefold()
+        terms = aliases.get(title_key, (self._normalize_title(watch_title),))
+        return any(term in normalized_listing for term in terms)
+
+    def _normalize_title(self, title: str) -> str:
+        return (
+            title.casefold()
+            .replace("&", " and ")
+            .replace("-", " ")
+            .replace(":", " ")
+            .replace("#", " ")
+        )
 
     def _sync_default_margin(self, value: float) -> None:
         if not self.margin_input.hasFocus():

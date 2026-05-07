@@ -86,3 +86,13 @@ def test_modern_year_is_flagged_for_vintage_watchlist_filtering() -> None:
     assert parsed.grade == 8.0
     assert "modern_year" in parsed.flags
     assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)
+
+
+def test_later_volume_reprint_and_annual_flags_are_deal_breakers() -> None:
+    parsed = parse_listing_title("Iron Man V2 #1 CGC 7.0 Special Edition")
+
+    assert parsed.issue_number == "1"
+    assert parsed.grade == 7.0
+    assert "later_volume" in parsed.flags
+    assert "reprint" in parsed.flags
+    assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)
