@@ -68,3 +68,21 @@ def test_parse_qualified_and_missing_mvs_flags() -> None:
     assert "qualified" in parsed.flags
     assert "missing_mvs" in parsed.flags
     assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)
+
+
+def test_issue_number_is_not_parsed_as_integer_grade() -> None:
+    parsed = parse_listing_title("Avengers & X-Men: Axis #5 CBCS NOT CGC 9.8 Johnson Cover Marvel Comics 2015")
+
+    assert parsed.issue_number == "5"
+    assert parsed.grade == 9.8
+    assert "not_cgc" in parsed.flags
+    assert "modern_year" in parsed.flags
+    assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)
+
+
+def test_modern_year_is_flagged_for_vintage_watchlist_filtering() -> None:
+    parsed = parse_listing_title("2023 Fleer Ultra Wolverine Team Affiliations Blue Foil New Avengers CGC 8")
+
+    assert parsed.grade == 8.0
+    assert "modern_year" in parsed.flags
+    assert DEAL_BREAKER_FLAGS.intersection(parsed.flags)

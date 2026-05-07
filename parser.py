@@ -7,8 +7,16 @@ from dataclasses import dataclass
 from typing import Optional
 
 
-CGC_GRADE_RE = re.compile(
-    r"\b(?:CGC|CBCS|PGX)?\s*(?:SS\s*)?(?:NM/MT\s*)?(10(?:\.0)?|9\.[0-9]|[1-8](?:\.[0-9])?|0\.[5-9])\b",
+SLABBED_GRADE_RE = re.compile(
+    r"\b(?:CGC|CBCS|PGX)\s*(?:SS\s*)?(?:NM/MT\s*)?(10(?:\.0)?|9\.[0-9]|[1-8](?:\.[0-9])?|0\.[5-9])\b",
+    re.IGNORECASE,
+)
+REVERSE_SLABBED_GRADE_RE = re.compile(
+    r"\b(10(?:\.0)?|9\.[0-9]|[1-8]\.[0-9]|0\.[5-9])\s*(?:CGC|CBCS|PGX)\b",
+    re.IGNORECASE,
+)
+DECIMAL_GRADE_RE = re.compile(
+    r"\b(10\.0|9\.[0-9]|[1-8]\.[0-9]|0\.[5-9])\b",
     re.IGNORECASE,
 )
 ISSUE_RE = re.compile(r"(?:#|issue\s+)([A-Za-z0-9.\-/]+)", re.IGNORECASE)
@@ -30,9 +38,11 @@ FLAG_PATTERNS = {
     "restored": re.compile(r"\b(restored|restoration|cgc r|cgc .*?\(r\)|\(r\))\b", re.IGNORECASE),
     "incomplete": re.compile(r"\b(incomplete|missing page|missing pages|cut coupon)\b", re.IGNORECASE),
     "missing_mvs": re.compile(r"\b(missing mvs|mvs missing|missing marvel value stamp)\b", re.IGNORECASE),
+    "not_cgc": re.compile(r"\b(not cgc|raw|cgc worthy|ready for cgc|cgc candidate)\b", re.IGNORECASE),
+    "modern_year": re.compile(r"\b(198[0-9]|199[0-9]|20[0-9]{2})\b", re.IGNORECASE),
 }
 
-DEAL_BREAKER_FLAGS = frozenset({"qualified", "restored", "incomplete", "missing_mvs"})
+DEAL_BREAKER_FLAGS = frozenset({"qualified", "restored", "incomplete", "missing_mvs", "not_cgc", "modern_year"})
 
 
 @dataclass(frozen=True)
@@ -52,7 +62,7 @@ class ParsedListing:
 def parse_listing_title(title: str) -> ParsedListing:
     """Extract common CGC listing details from an eBay title."""
 
-    grade_match = CGC_GRADE_RE.search(title)
+    grade_match = _grade_match(title)
     issue_match = ISSUE_RE.search(title)
     page_match = PAGE_QUALITY_RE.search(title)
     slab_match = SLAB_RE.search(title)
@@ -66,6 +76,21 @@ def parse_listing_title(title: str) -> ParsedListing:
         grading_company=slab_match.group(1).upper() if slab_match else None,
         flags=flags,
     )
+
+
+def _grade_match(title: str) -> Optional[re.Match[str]]:
+    slabbed_match = SLABBED_GRADE_RE.search(title)
+    if slabbed_match:
+        return slabbed_match
+
+    reverse_match = REVERSE_SLABBED_GRADE_RE.search(title)
+    if reverse_match:
+        return reverse_match
+
+    if SLAB_RE.search(title):
+        return DECIMAL_GRADE_RE.search(title)
+
+    return None
 
 
 def _normalize_page_quality(value: str) -> str:
