@@ -1,194 +1,157 @@
 title,issue_number,grade,fair_value
-Amazing Spider-Man,300,8.0,1050
-Amazing Spider-Man,300,9.0,1650
-Amazing Spider-Man,300,9.2,2050
-Amazing Spider-Man,300,9.4,2550
-Amazing Spider-Man,300,9.6,3400
-Amazing Spider-Man,300,9.8,6500
-Amazing Spider-Man,361,9.0,225
-Amazing Spider-Man,361,9.4,325
-Amazing Spider-Man,361,9.6,450
-Amazing Spider-Man,361,9.8,725
-New Mutants,98,9.0,275
-New Mutants,98,9.4,375
-New Mutants,98,9.6,475
-New Mutants,98,9.8,775
-Batman Adventures,12,8.0,750
-Batman Adventures,12,9.0,1150
-Batman Adventures,12,9.4,1600
-Batman Adventures,12,9.6,2300
-Batman Adventures,12,9.8,4200
-Incredible Hulk,181,5.0,3600
-Incredible Hulk,181,6.0,4700
-Incredible Hulk,181,7.0,6500
-Incredible Hulk,181,8.0,9500
-Incredible Hulk,181,9.0,17500
-Incredible Hulk,181,9.4,28000
-X-Men,266,9.0,225
-X-Men,266,9.4,350
-X-Men,266,9.6,475
-X-Men,266,9.8,825
-Secret Wars,8,9.0,175
-Secret Wars,8,9.4,275
-Secret Wars,8,9.6,375
-Secret Wars,8,9.8,650
-Teenage Mutant Ninja Turtles Adventures,1,8.5,225
-Teenage Mutant Ninja Turtles Adventures,1,9.0,300
-Teenage Mutant Ninja Turtles Adventures,1,9.4,425
-Teenage Mutant Ninja Turtles Adventures,1,9.6,575
-Teenage Mutant Ninja Turtles Adventures,1,9.8,950
-Spawn,1,9.4,90
-Spawn,1,9.6,125
-Spawn,1,9.8,225
-Ultimate Fallout,4,9.0,525
-Ultimate Fallout,4,9.4,725
-Ultimate Fallout,4,9.6,950
-Ultimate Fallout,4,9.8,1700
-Amazing Spider-Man,121,5.0,700
-Amazing Spider-Man,121,6.0,950
-Amazing Spider-Man,121,7.0,1300
-Amazing Spider-Man,121,8.0,1900
-Amazing Spider-Man,122,5.0,600
-Amazing Spider-Man,122,6.0,800
-Amazing Spider-Man,122,7.0,1100
-Amazing Spider-Man,122,8.0,1600
-Amazing Spider-Man,46,5.0,500
-Amazing Spider-Man,46,6.0,700
-Amazing Spider-Man,46,7.0,950
-Amazing Spider-Man,46,8.0,1400
-Amazing Spider-Man,50,5.0,900
-Amazing Spider-Man,50,6.0,1200
-Amazing Spider-Man,50,7.0,1700
-Amazing Spider-Man,50,8.0,2500
-Amazing Spider-Man,51,5.0,250
-Amazing Spider-Man,51,6.0,350
-Amazing Spider-Man,51,7.0,500
-Amazing Spider-Man,51,8.0,750
-Amazing Spider-Man,2,5.0,4500
-Amazing Spider-Man,2,6.0,6500
-Amazing Spider-Man,2,7.0,9500
-Amazing Spider-Man,2,8.0,15000
-Amazing Spider-Man,3,5.0,3500
-Amazing Spider-Man,3,6.0,5200
-Amazing Spider-Man,3,7.0,8000
-Amazing Spider-Man,3,8.0,13000
-Amazing Spider-Man,4,5.0,3000
-Amazing Spider-Man,4,6.0,4500
-Amazing Spider-Man,4,7.0,7000
-Amazing Spider-Man,4,8.0,11000
-Fantastic Four,48,5.0,2200
-Fantastic Four,48,6.0,3200
-Fantastic Four,48,7.0,5000
-Fantastic Four,48,8.0,8000
-Fantastic Four,49,5.0,700
-Fantastic Four,49,6.0,950
-Fantastic Four,49,7.0,1400
-Fantastic Four,49,8.0,2200
-Fantastic Four,50,5.0,450
-Fantastic Four,50,6.0,650
-Fantastic Four,50,7.0,900
-Fantastic Four,50,8.0,1400
-Fantastic Four,52,5.0,1600
-Fantastic Four,52,6.0,2300
-Fantastic Four,52,7.0,3400
-Fantastic Four,52,8.0,5200
-Fantastic Four,57,5.0,300
-Fantastic Four,57,6.0,425
-Fantastic Four,57,7.0,600
-Fantastic Four,57,8.0,900
-Fantastic Four,2,5.0,2500
-Fantastic Four,2,6.0,3800
-Fantastic Four,2,7.0,6000
-Fantastic Four,2,8.0,9500
-Fantastic Four,3,5.0,1800
-Fantastic Four,3,6.0,2700
-Fantastic Four,3,7.0,4200
-Fantastic Four,3,8.0,7000
-Fantastic Four,4,5.0,2200
-Fantastic Four,4,6.0,3300
-Fantastic Four,4,7.0,5200
-Fantastic Four,4,8.0,8500
-Iron Man,1,5.0,450
-Iron Man,1,6.0,650
-Iron Man,1,7.0,900
-Iron Man,1,8.0,1300
-Iron Man,55,5.0,900
-Iron Man,55,6.0,1300
-Iron Man,55,7.0,1900
-Iron Man,55,8.0,2900
-Thor,165,5.0,350
-Thor,165,6.0,500
-Thor,165,7.0,750
-Thor,165,8.0,1150
-Avengers,57,5.0,800
-Avengers,57,6.0,1150
-Avengers,57,7.0,1700
-Avengers,57,8.0,2600
-Avengers,2,5.0,600
-Avengers,2,6.0,900
-Avengers,2,7.0,1400
-Avengers,2,8.0,2300
-Avengers,3,5.0,350
-Avengers,3,6.0,525
-Avengers,3,7.0,800
-Avengers,3,8.0,1250
-Avengers,4,5.0,1800
-Avengers,4,6.0,2600
-Avengers,4,7.0,4000
-Avengers,4,8.0,6500
-Avengers,5,5.0,300
-Avengers,5,6.0,425
-Avengers,5,7.0,650
-Avengers,5,8.0,1000
-Avengers,6,5.0,275
-Avengers,6,6.0,400
-Avengers,6,7.0,600
-Avengers,6,8.0,950
-Strange Tales,110,5.0,4500
-Strange Tales,110,6.0,7000
-Strange Tales,110,7.0,11000
-Strange Tales,110,8.0,18000
-Daredevil,1,5.0,2000
-Daredevil,1,6.0,3000
-Daredevil,1,7.0,4700
-Daredevil,1,8.0,7500
-X-Men,94,5.0,550
-X-Men,94,6.0,800
-X-Men,94,7.0,1200
-X-Men,94,8.0,1800
-X-Men,95,5.0,200
-X-Men,95,6.0,300
-X-Men,95,7.0,450
-X-Men,95,8.0,700
-X-Men,101,5.0,550
-X-Men,101,6.0,800
-X-Men,101,7.0,1150
-X-Men,101,8.0,1700
-X-Men,1,5.0,8000
-X-Men,1,6.0,12000
-X-Men,1,7.0,20000
-X-Men,1,8.0,35000
-X-Men,2,5.0,1100
-X-Men,2,6.0,1600
-X-Men,2,7.0,2400
-X-Men,2,8.0,3800
-X-Men,3,5.0,900
-X-Men,3,6.0,1300
-X-Men,3,7.0,1900
-X-Men,3,8.0,3000
-X-Men,4,5.0,1600
-X-Men,4,6.0,2400
-X-Men,4,7.0,3600
-X-Men,4,8.0,5500
-X-Men,5,5.0,650
-X-Men,5,6.0,950
-X-Men,5,7.0,1400
-X-Men,5,8.0,2200
-X-Men,6,5.0,600
-X-Men,6,6.0,900
-X-Men,6,7.0,1300
-X-Men,6,8.0,2000
-X-Men,7,5.0,500
-X-Men,7,6.0,750
-X-Men,7,7.0,1100
-X-Men,7,8.0,1700
+Incredible Hulk,181,5,2500
+Incredible Hulk,181,6,2900
+Incredible Hulk,181,7,3500
+Incredible Hulk,181,8,4300
+Incredible Hulk,181,9,6500
+Amazing Spider-Man,121,4,200
+Amazing Spider-Man,121,5,220
+Amazing Spider-Man,121,6,240
+Amazing Spider-Man,121,7,400
+Amazing Spider-Man,121,8,550
+Amazing Spider-Man,121,9,800
+Amazing Spider-Man,122,4,110
+Amazing Spider-Man,122,5,150
+Amazing Spider-Man,122,6,170
+Amazing Spider-Man,122,7,250
+Amazing Spider-Man,122,8,375
+Amazing Spider-Man,122,9,650
+Amazing Spider-Man,46,6,200
+Amazing Spider-Man,46,7,350
+Amazing Spider-Man,46,8,500
+Amazing Spider-Man,46,9,925
+Amazing Spider-Man,50,6,900
+Amazing Spider-Man,50,7,1200
+Amazing Spider-Man,50,8,1700
+Amazing Spider-Man,50,9,2500
+Amazing Spider-Man,51,5,250
+Amazing Spider-Man,51,6,350
+Amazing Spider-Man,51,7,500
+Amazing Spider-Man,51,8,750
+Amazing Spider-Man,2,4,2800
+Amazing Spider-Man,2,5,3200
+Amazing Spider-Man,2,6,3500
+Amazing Spider-Man,2,7,6000
+Amazing Spider-Man,2,8,9250
+Amazing Spider-Man,3,4,2600
+Amazing Spider-Man,3,5,3200
+Amazing Spider-Man,3,6,3800
+Amazing Spider-Man,3,7,6000
+Amazing Spider-Man,3,8,8500
+Amazing Spider-Man,4,4,1300
+Amazing Spider-Man,4,5,1500
+Amazing Spider-Man,4,6,1900
+Amazing Spider-Man,4,7,4000
+Amazing Spider-Man,4,8,5250
+Fantastic Four,48,5,900
+Fantastic Four,48,6,1200
+Fantastic Four,48,7,1900
+Fantastic Four,48,8,2400
+Fantastic Four,49,5,500
+Fantastic Four,49,6,625
+Fantastic Four,49,7,1000
+Fantastic Four,49,8,1700
+Fantastic Four,50,5,300
+Fantastic Four,50,6,375
+Fantastic Four,50,7,900
+Fantastic Four,50,8,1100
+Fantastic Four,52,5,500
+Fantastic Four,52,6,700
+Fantastic Four,52,7,1300
+Fantastic Four,52,8,2100
+Fantastic Four,57,5,140
+Fantastic Four,57,6,160
+Fantastic Four,57,7,280
+Fantastic Four,57,8,375
+Fantastic Four,2,5,2000
+Fantastic Four,2,6,2900
+Fantastic Four,2,7,5000
+Fantastic Four,2,8,7250
+Fantastic Four,3,5,2000
+Fantastic Four,3,6,2500
+Fantastic Four,3,7,3500
+Fantastic Four,3,8,4900
+Fantastic Four,4,5,1600
+Fantastic Four,4,6,1900
+Fantastic Four,4,7,4500
+Fantastic Four,4,8,6500
+Iron Man,1,5,400
+Iron Man,1,6,525
+Iron Man,1,7,1000
+Iron Man,1,8,1450
+Iron Man,55,5,400
+Iron Man,55,6,425
+Iron Man,55,7,600
+Iron Man,55,8,725
+Thor,165,5,100
+Thor,165,6,110
+Thor,165,7,200
+Thor,165,8,289
+Avengers,57,5,260
+Avengers,57,6,325
+Avengers,57,7,400
+Avengers,57,8,575
+Avengers,2,5,450
+Avengers,2,6,500
+Avengers,2,7,750
+Avengers,2,8,1250
+Avengers,3,5,350
+Avengers,3,6,500
+Avengers,3,7,800
+Avengers,3,8,1150
+Avengers,4,5,1400
+Avengers,4,6,1750
+Avengers,4,7,3000
+Avengers,4,8,4000
+Avengers,5,5,160
+Avengers,5,6,210
+Avengers,5,7,325
+Avengers,5,8,475
+Avengers,6,5,190
+Avengers,6,6,230
+Avengers,6,7,400
+Avengers,6,8,525
+Strange Tales,110,5,2000
+Strange Tales,110,6,3200
+Strange Tales,110,7,5000
+Strange Tales,110,8,7500
+Daredevil,1,5,3500
+Daredevil,1,6,4100
+Daredevil,1,7,5500
+Daredevil,1,8,7500
+X-Men,94,5,300
+X-Men,94,6,450
+X-Men,94,7,600
+X-Men,94,8,850
+X-Men,101,5,250
+X-Men,101,6,325
+X-Men,101,7,400
+X-Men,101,8,525
+X-Men,1,5,10000
+X-Men,1,6,14000
+X-Men,1,7,24000
+X-Men,1,8,36000
+X-Men,2,5,800
+X-Men,2,6,1100
+X-Men,2,7,1500
+X-Men,2,8,2250
+X-Men,3,5,500
+X-Men,3,6,625
+X-Men,3,7,1000
+X-Men,3,8,1850
+X-Men,4,5,1400
+X-Men,4,6,1700
+X-Men,4,7,3000
+X-Men,4,8,4200
+X-Men,5,5,300
+X-Men,5,6,375
+X-Men,5,7,500
+X-Men,5,8,875
+X-Men,6,5,300
+X-Men,6,6,350
+X-Men,6,7,600
+X-Men,6,8,900
+X-Men,7,5,240
+X-Men,7,6,350
+X-Men,7,7,600
+X-Men,7,8,900

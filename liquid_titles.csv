@@ -1,12 +1,12 @@
 title,issue_number,min_grade,max_grade,target_profit_margin
-Amazing Spider-Man,121,5,8,0.2
-Amazing Spider-Man,122,5,8,0.2
-Amazing Spider-Man,46,5,8,0.2
-Amazing Spider-Man,50,5,8,0.2
+Amazing Spider-Man,121,4,9,0.2
+Amazing Spider-Man,122,4,9,0.2
+Amazing Spider-Man,46,6,9,0.2
+Amazing Spider-Man,50,6,9,0.2
 Amazing Spider-Man,51,5,8,0.2
-Amazing Spider-Man,2,5,8,0.2
-Amazing Spider-Man,3,5,8,0.2
-Amazing Spider-Man,4,5,8,0.2
+Amazing Spider-Man,2,4,8,0.2
+Amazing Spider-Man,3,4,8,0.2
+Amazing Spider-Man,4,4,8,0.2
 Fantastic Four,48,5,8,0.2
 Fantastic Four,49,5,8,0.2
 Fantastic Four,50,5,8,0.2
@@ -28,7 +28,6 @@ Incredible Hulk,181,5,8,0.2
 Strange Tales,110,5,8,0.2
 Daredevil,1,5,8,0.2
 X-Men,94,5,8,0.2
-X-Men,95,5,8,0.2
 X-Men,101,5,8,0.2
 X-Men,1,5,8,0.2
 X-Men,2,5,8,0.2
