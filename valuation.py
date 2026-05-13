@@ -46,6 +46,37 @@ class LocalFairValueProvider:
             return exact_value
         return self._interpolated_value(title, issue_number, grade, values)
 
+    def upsert_fair_value(self, fair_value: FairValue) -> None:
+        rows = self._fair_value_rows()
+        target_key = self._key(fair_value.title, fair_value.issue_number, fair_value.grade)
+        updated = False
+        for row in rows:
+            try:
+                row_key = self._key(row["title"], row["issue_number"], float(row["grade"]))
+            except (KeyError, TypeError, ValueError):
+                continue
+            if row_key == target_key:
+                row["fair_value"] = f"{fair_value.value:g}"
+                updated = True
+                break
+
+        if not updated:
+            rows.append(
+                {
+                    "title": fair_value.title,
+                    "issue_number": fair_value.issue_number,
+                    "grade": f"{fair_value.grade:g}",
+                    "fair_value": f"{fair_value.value:g}",
+                }
+            )
+
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=["title", "issue_number", "grade", "fair_value"])
+            writer.writeheader()
+            writer.writerows(rows)
+        self._values = None
+
     def _load_values(self) -> dict[tuple[str, str, float], FairValue]:
         if self._values is not None:
             return self._values
@@ -89,6 +120,28 @@ class LocalFairValueProvider:
 
     def _key(self, title: str, issue_number: str, grade: float) -> tuple[str, str, float]:
         return (title.strip().casefold(), issue_number.strip().casefold(), round(grade, 1))
+
+    def _fair_value_rows(self) -> list[dict[str, str]]:
+        if not self.path.exists():
+            return []
+
+        with self.path.open("r", newline="", encoding="utf-8-sig") as file:
+            reader = csv.DictReader(file)
+            if not reader.fieldnames:
+                return []
+            required_columns = {"title", "issue_number", "grade", "fair_value"}
+            if not required_columns.issubset(set(reader.fieldnames)):
+                missing = ", ".join(sorted(required_columns - set(reader.fieldnames)))
+                raise ValueError(f"Local fair-value file is missing required columns: {missing}")
+            return [
+                {
+                    "title": row.get("title", ""),
+                    "issue_number": row.get("issue_number", ""),
+                    "grade": row.get("grade", ""),
+                    "fair_value": row.get("fair_value", ""),
+                }
+                for row in reader
+            ]
 
     def _interpolated_value(
         self,

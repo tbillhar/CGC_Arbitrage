@@ -4,7 +4,7 @@ from urllib.error import URLError
 import pytest
 
 from config import EbayConfig
-from ebay_client import EbayApiError, EbayClient, EbayCredentialsMissingError
+from ebay_client import EbayApiError, EbayClient, EbayCredentialsMissingError, EbayListing
 
 
 def test_live_mode_without_credentials_raises_clear_error() -> None:
@@ -106,6 +106,41 @@ def test_item_summary_extracts_item_specifics() -> None:
 
     assert listings[0].is_fixed_price is True
     assert listings[0].item_specifics == {
+        "era": "Modern Age (1992-Now)",
+        "publication year": "1992",
+    }
+
+
+def test_fetch_listing_details_merges_item_specifics(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = EbayClient(EbayConfig(mode="live", client_id="id", client_secret="secret"))
+    requested_urls: list[str] = []
+
+    def fake_get_json(url: str) -> dict[str, object]:
+        requested_urls.append(url)
+        return {
+            "buyingOptions": ["FIXED_PRICE"],
+            "localizedAspects": [
+                {"name": "Era", "value": "Modern Age (1992-Now)"},
+                {"name": "Publication Year", "value": "1992"},
+            ],
+        }
+
+    monkeypatch.setattr(client, "_get_json", fake_get_json)
+
+    listing = EbayListing(
+        item_id="v1|123|0",
+        title="X-men 4 Cgc 5.0",
+        price=100,
+        currency="USD",
+        item_url="https://example.test/item",
+        seller_username="seller",
+        buying_options=("FIXED_PRICE",),
+    )
+
+    detailed = client.fetch_listing_details(listing)
+
+    assert requested_urls == ["https://api.ebay.com/buy/browse/v1/item/v1%7C123%7C0"]
+    assert detailed.item_specifics == {
         "era": "Modern Age (1992-Now)",
         "publication year": "1992",
     }

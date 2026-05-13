@@ -12,9 +12,10 @@ import json
 import ssl
 import time
 from dataclasses import dataclass
+from dataclasses import replace
 from typing import Any, Iterable
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 import certifi
@@ -86,6 +87,30 @@ class EbayClient:
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
             raise EbayApiError(f"eBay Browse API request failed: {error}") from error
         return list(self._parse_item_summaries(payload.get("itemSummaries", [])))
+
+    def fetch_listing_details(self, listing: EbayListing) -> EbayListing:
+        if self.is_mock_mode:
+            return listing
+
+        if not self.has_credentials:
+            raise EbayCredentialsMissingError("eBay credentials are not configured.")
+
+        if not listing.item_id:
+            return listing
+
+        try:
+            payload = self._get_json(f"{self.config.browse_base_url}/item/{quote(listing.item_id, safe='')}")
+        except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
+            raise EbayApiError(f"eBay Browse item detail request failed: {error}") from error
+
+        item_specifics = dict(listing.item_specifics or {})
+        item_specifics.update(self._item_specifics(payload))
+        buying_options = self._buying_options(payload) or listing.buying_options
+        return replace(
+            listing,
+            buying_options=buying_options,
+            item_specifics=item_specifics,
+        )
 
     def _search_mock_listings(self, title: str, issue_number: str, limit: int) -> list[EbayListing]:
         if not self.config.mock_listings_path.exists():

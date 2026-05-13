@@ -79,6 +79,8 @@ GoCollect is currently a placeholder integration in [gocollect_client.py](gocoll
 
 Until authentication and exact endpoint mapping are confirmed, fair values come from [fair_values.csv](fair_values.csv). This is intentional: the scanner can be tested end to end without hard-coding unknown GoCollect API behavior.
 
+GoCollect's public API page says API tokens and the complete endpoint documentation require login/API access. Once `GOCOLLECT_API_KEY` and the exact search/insights responses are confirmed, the scanner can automatically backfill missing local rows: when GoCollect returns a grade-specific FMV that is not already in [fair_values.csv](fair_values.csv), the app writes it to the CSV for future scans.
+
 ## Local Data Files
 
 - [liquid_titles.csv](liquid_titles.csv): predefined liquid CGC watchlist.

@@ -65,3 +65,39 @@ def test_local_fair_value_provider_interpolates_between_known_grades(tmp_path: P
     assert fair_value is not None
     assert fair_value.value == 800
     assert fair_value.source == "local_csv_interpolated"
+
+
+def test_local_fair_value_provider_upserts_new_value(tmp_path: Path) -> None:
+    values_file = tmp_path / "fair_values.csv"
+    provider = LocalFairValueProvider(values_file)
+
+    provider.upsert_fair_value(
+        fair_value=provider_value("X-Men", "4", 5.0, 1200),
+    )
+
+    fair_value = provider.fetch_fair_value("X-Men", "4", 5.0)
+    assert fair_value is not None
+    assert fair_value.value == 1200
+
+
+def test_local_fair_value_provider_upserts_existing_value(tmp_path: Path) -> None:
+    values_file = tmp_path / "fair_values.csv"
+    values_file.write_text(
+        "title,issue_number,grade,fair_value\n"
+        "X-Men,4,5,1000\n",
+        encoding="utf-8",
+    )
+    provider = LocalFairValueProvider(values_file)
+
+    provider.upsert_fair_value(provider_value("X-Men", "4", 5.0, 1200))
+
+    assert values_file.read_text(encoding="utf-8").count("X-Men,4,5,1200") == 1
+    fair_value = provider.fetch_fair_value("X-Men", "4", 5.0)
+    assert fair_value is not None
+    assert fair_value.value == 1200
+
+
+def provider_value(title: str, issue_number: str, grade: float, value: float):
+    from valuation import FairValue
+
+    return FairValue(title=title, issue_number=issue_number, grade=grade, value=value, source="gocollect")

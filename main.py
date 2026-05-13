@@ -34,7 +34,7 @@ from PySide6.QtWidgets import (
 
 from config import APP_NAME, PRESET_WATCHLIST_PATH, PRICING, PricingConfig
 from database import AppSettings, CandidateListing, Database, WatchlistItem
-from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError
+from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError, EbayListing
 from gocollect_client import GoCollectClient
 from parser import DEAL_BREAKER_FLAGS, parse_listing_title
 from valuation import FairValue, LocalFairValueProvider, calculate_deal
@@ -75,6 +75,8 @@ class ScanDiagnostics:
     issue_mismatch: int = 0
     deal_breaker_flags: int = 0
     item_specifics_excluded: int = 0
+    item_detail_lookups: int = 0
+    item_detail_errors: int = 0
     auction_listing: int = 0
     grade_out_of_range: int = 0
     missing_fair_value: int = 0
@@ -100,6 +102,8 @@ class ScanDiagnostics:
             f"Skipped: issue mismatch: {self.issue_mismatch}",
             f"Skipped: qualified/restored/incomplete: {self.deal_breaker_flags}",
             f"Skipped: modern era/year item specifics: {self.item_specifics_excluded}",
+            f"eBay item detail lookups: {self.item_detail_lookups}",
+            f"eBay item detail lookup errors: {self.item_detail_errors}",
             f"Skipped: auction listing: {self.auction_listing}",
             f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
             f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
@@ -415,9 +419,6 @@ class ScannerWindow(QMainWindow):
                 if not listing.is_fixed_price:
                     diagnostics.auction_listing += 1
                     continue
-                if self._is_excluded_by_item_specifics(listing.item_specifics or {}):
-                    diagnostics.item_specifics_excluded += 1
-                    continue
                 if not self._title_matches(item.title, listing.title):
                     diagnostics.title_mismatch += 1
                     continue
@@ -437,6 +438,10 @@ class ScannerWindow(QMainWindow):
                     continue
                 if not (item.min_grade <= parsed.grade <= item.max_grade):
                     diagnostics.grade_out_of_range += 1
+                    continue
+                listing = self._listing_with_item_details(listing, diagnostics)
+                if self._is_excluded_by_item_specifics(listing.item_specifics or {}):
+                    diagnostics.item_specifics_excluded += 1
                     continue
                 fair_value = self._fetch_fair_value(item.title, item.issue_number, parsed.grade)
                 if fair_value is None:
@@ -477,15 +482,37 @@ class ScannerWindow(QMainWindow):
             self.status_label.setText(f"Scan complete. {len(candidates)} candidates found.")
 
     def _fetch_fair_value(self, title: str, issue_number: str, grade: float) -> FairValue | None:
-        fair_value = self.gocollect.fetch_fair_value(title, issue_number, grade)
-        if fair_value is not None:
-            return fair_value
-
         try:
-            return self.local_values.fetch_fair_value(title, issue_number, grade)
+            local_value = self.local_values.fetch_fair_value(title, issue_number, grade)
         except ValueError as error:
             QMessageBox.warning(self, APP_NAME, str(error))
             return None
+        if local_value is not None:
+            return local_value
+
+        fair_value = self.gocollect.fetch_fair_value(title, issue_number, grade)
+        if fair_value is not None:
+            try:
+                self.local_values.upsert_fair_value(fair_value)
+            except ValueError as error:
+                QMessageBox.warning(self, APP_NAME, str(error))
+            return fair_value
+
+        return None
+
+    def _listing_with_item_details(
+        self,
+        listing: EbayListing,
+        diagnostics: ScanDiagnostics,
+    ) -> EbayListing:
+        if listing.item_specifics:
+            return listing
+        diagnostics.item_detail_lookups += 1
+        try:
+            return self.ebay.fetch_listing_details(listing)
+        except EbayApiError:
+            diagnostics.item_detail_errors += 1
+            return listing
 
     def _pricing_config(self) -> PricingConfig:
         return PricingConfig(
