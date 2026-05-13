@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import math
 import re
 import sys
 from dataclasses import dataclass, field
@@ -37,7 +38,7 @@ from database import AppSettings, CandidateListing, Database, WatchlistItem
 from ebay_client import EbayApiError, EbayAuthError, EbayClient, EbayCredentialsMissingError, EbayListing
 from gocollect_client import GoCollectClient
 from parser import DEAL_BREAKER_FLAGS, parse_listing_title
-from valuation import FairValue, LocalFairValueProvider, calculate_deal
+from valuation import FairValue, LocalFairValueProvider, calculate_buy_target, calculate_deal
 
 
 class MoneyItem(QTableWidgetItem):
@@ -213,15 +214,18 @@ class ScannerWindow(QMainWindow):
         delete_button = QPushButton("Remove selected")
         scan_button = QPushButton("Scan watchlist")
         export_button = QPushButton("Export candidates CSV")
+        buy_list_button = QPushButton("Export buy list CSV")
         add_button.clicked.connect(self._add_watchlist_item)
         import_button.clicked.connect(self._import_preset_watchlist)
         delete_button.clicked.connect(self._delete_selected_watchlist_item)
         scan_button.clicked.connect(self._scan_watchlist)
         export_button.clicked.connect(self._export_candidates)
+        buy_list_button.clicked.connect(self._export_buy_list)
         button_row.addWidget(add_button)
         button_row.addWidget(import_button)
         button_row.addWidget(delete_button)
         button_row.addStretch(1)
+        button_row.addWidget(buy_list_button)
         button_row.addWidget(export_button)
         button_row.addWidget(scan_button)
         layout.addLayout(button_row)
@@ -694,6 +698,103 @@ class ScannerWindow(QMainWindow):
                     }
                 )
         self.status_label.setText(f"Exported {len(self.current_candidates)} candidates to {path}.")
+
+    def _export_buy_list(self) -> None:
+        watchlist = self.database.get_watchlist()
+        if not watchlist:
+            QMessageBox.information(self, APP_NAME, "There are no watchlist rows to export.")
+            return
+
+        path, _selected_filter = QFileDialog.getSaveFileName(
+            self,
+            "Export convention buy list",
+            "convention_buy_list.csv",
+            "CSV files (*.csv)",
+        )
+        if not path:
+            return
+
+        pricing = self._pricing_config()
+        self._save_scan_settings()
+        rows = self._buy_list_rows(watchlist, pricing, self.default_margin_input.value() / 100)
+
+        with open(path, "w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(
+                file,
+                fieldnames=[
+                    "title",
+                    "issue_number",
+                    "grade",
+                    "fair_value",
+                    "fair_value_source",
+                    "max_buy_price",
+                    "estimated_profit_at_max_buy",
+                    "estimated_margin_at_max_buy",
+                    "target_profit_margin",
+                    "selling_fee_rate",
+                    "extra_payment_fee_rate",
+                    "fixed_order_fee",
+                    "shipping_cost",
+                    "status",
+                ],
+            )
+            writer.writeheader()
+            writer.writerows(rows)
+        self.status_label.setText(f"Exported {len(rows)} buy-list rows to {path}.")
+
+    def _buy_list_rows(
+        self,
+        watchlist: list[WatchlistItem],
+        pricing: PricingConfig,
+        default_margin: float,
+    ) -> list[dict[str, str | float]]:
+        rows: list[dict[str, str | float]] = []
+        for item in watchlist:
+            target_margin = item.target_profit_margin if item.target_profit_margin > 0 else default_margin
+            for grade in self._watchlist_grades(item):
+                fair_value = self._fetch_fair_value(item.title, item.issue_number, grade)
+                base_row: dict[str, str | float] = {
+                    "title": item.title,
+                    "issue_number": item.issue_number,
+                    "grade": f"{grade:g}",
+                    "target_profit_margin": round(target_margin, 4),
+                    "selling_fee_rate": round(pricing.selling_fee_rate, 4),
+                    "extra_payment_fee_rate": round(pricing.payment_fee_rate, 4),
+                    "fixed_order_fee": round(pricing.fixed_order_fee, 2),
+                    "shipping_cost": round(pricing.shipping_cost, 2),
+                }
+                if fair_value is None:
+                    rows.append(
+                        {
+                            **base_row,
+                            "fair_value": "",
+                            "fair_value_source": "",
+                            "max_buy_price": "",
+                            "estimated_profit_at_max_buy": "",
+                            "estimated_margin_at_max_buy": "",
+                            "status": "missing_fair_value",
+                        }
+                    )
+                    continue
+
+                buy_target = calculate_buy_target(fair_value.value, target_margin, pricing)
+                rows.append(
+                    {
+                        **base_row,
+                        "fair_value": round(fair_value.value, 2),
+                        "fair_value_source": fair_value.source,
+                        "max_buy_price": buy_target.max_buy_price,
+                        "estimated_profit_at_max_buy": buy_target.estimated_profit_at_max_buy,
+                        "estimated_margin_at_max_buy": buy_target.estimated_margin_at_max_buy,
+                        "status": "ok",
+                    }
+                )
+        return rows
+
+    def _watchlist_grades(self, item: WatchlistItem) -> list[float]:
+        min_grade = math.ceil(item.min_grade)
+        max_grade = math.floor(item.max_grade)
+        return [float(grade) for grade in range(min_grade, max_grade + 1)]
 
     def closeEvent(self, event: Any) -> None:
         self._save_scan_settings()

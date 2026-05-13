@@ -34,6 +34,20 @@ class DealMath:
     is_candidate: bool
 
 
+@dataclass(frozen=True)
+class BuyTarget:
+    fair_value: float
+    shipping_cost: float
+    selling_fee_rate: float
+    payment_fee_rate: float
+    fixed_order_fee: float
+    target_profit_margin: float
+    net_after_sale_costs: float
+    max_buy_price: float
+    estimated_profit_at_max_buy: float
+    estimated_margin_at_max_buy: float
+
+
 class LocalFairValueProvider:
     def __init__(self, path: Path = LOCAL_FAIR_VALUES_PATH) -> None:
         self.path = path
@@ -183,10 +197,8 @@ def calculate_deal(
 ) -> DealMath:
     """Calculate max buy price and expected return for a slab listing."""
 
-    total_fee_rate = pricing.selling_fee_rate + pricing.payment_fee_rate
-    net_after_sale_costs = fair_value * (1 - total_fee_rate) - pricing.shipping_cost - pricing.fixed_order_fee
-    max_buy_price = max(0.0, net_after_sale_costs * (1 - target_profit_margin))
-    estimated_profit = net_after_sale_costs - listing_price
+    buy_target = calculate_buy_target(fair_value, target_profit_margin, pricing)
+    estimated_profit = buy_target.net_after_sale_costs - listing_price
     estimated_margin = estimated_profit / listing_price if listing_price > 0 else 0.0
 
     return DealMath(
@@ -197,8 +209,35 @@ def calculate_deal(
         payment_fee_rate=pricing.payment_fee_rate,
         fixed_order_fee=pricing.fixed_order_fee,
         target_profit_margin=target_profit_margin,
-        max_buy_price=round(max_buy_price, 2),
+        max_buy_price=buy_target.max_buy_price,
         estimated_profit=round(estimated_profit, 2),
         estimated_margin=round(estimated_margin, 4),
-        is_candidate=listing_price <= max_buy_price and fair_value > 0,
+        is_candidate=listing_price <= buy_target.max_buy_price and fair_value > 0,
+    )
+
+
+def calculate_buy_target(
+    fair_value: float,
+    target_profit_margin: float,
+    pricing: PricingConfig = PRICING,
+) -> BuyTarget:
+    """Calculate a convention buy ceiling from a fair value and target margin."""
+
+    total_fee_rate = pricing.selling_fee_rate + pricing.payment_fee_rate
+    net_after_sale_costs = fair_value * (1 - total_fee_rate) - pricing.shipping_cost - pricing.fixed_order_fee
+    max_buy_price = max(0.0, net_after_sale_costs * (1 - target_profit_margin))
+    estimated_profit = net_after_sale_costs - max_buy_price
+    estimated_margin = estimated_profit / max_buy_price if max_buy_price > 0 else 0.0
+
+    return BuyTarget(
+        fair_value=fair_value,
+        shipping_cost=pricing.shipping_cost,
+        selling_fee_rate=pricing.selling_fee_rate,
+        payment_fee_rate=pricing.payment_fee_rate,
+        fixed_order_fee=pricing.fixed_order_fee,
+        target_profit_margin=target_profit_margin,
+        net_after_sale_costs=round(net_after_sale_costs, 2),
+        max_buy_price=round(max_buy_price, 2),
+        estimated_profit_at_max_buy=round(estimated_profit, 2),
+        estimated_margin_at_max_buy=round(estimated_margin, 4),
     )

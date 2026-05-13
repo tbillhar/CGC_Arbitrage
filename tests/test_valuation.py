@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from config import PricingConfig
-from valuation import LocalFairValueProvider, calculate_deal
+from valuation import LocalFairValueProvider, calculate_buy_target, calculate_deal
 
 
 def test_calculate_deal_marks_profitable_candidate() -> None:
@@ -34,6 +34,17 @@ def test_calculate_deal_subtracts_fixed_order_fee() -> None:
     assert deal.max_buy_price == 679.28
     assert deal.estimated_profit == 174.10
     assert deal.is_candidate is True
+
+
+def test_calculate_buy_target_returns_convention_buy_math() -> None:
+    pricing = PricingConfig(selling_fee_rate=0.1325, payment_fee_rate=0, fixed_order_fee=0.40, shipping_cost=18)
+
+    target = calculate_buy_target(1000, 0.20, pricing)
+
+    assert target.net_after_sale_costs == 849.10
+    assert target.max_buy_price == 679.28
+    assert target.estimated_profit_at_max_buy == 169.82
+    assert target.estimated_margin_at_max_buy == pytest.approx(0.25)
 
 
 def test_local_fair_value_provider_matches_case_insensitive_title(tmp_path: Path) -> None:

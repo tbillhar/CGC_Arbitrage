@@ -93,6 +93,8 @@ SQLite data is stored at `%USERPROFILE%\.cgc_arbitrage\scanner.sqlite3` by defau
 
 For a buying day or convention prep checklist, use [convention_runbook.md](convention_runbook.md).
 
+The app can also export a convention buy list from the current watchlist. `Export buy list CSV` writes one row per watchlist title/issue/grade with fair value, max buy price, expected profit at max buy, expected margin, and the fee/shipping assumptions used.
+
 ## Desktop Shortcut
 
 The repo includes [run_app.bat](run_app.bat), which starts the app using the project virtual environment.
@@ -114,4 +116,4 @@ Run:
 .\.venv\Scripts\python.exe -m pytest --basetemp=.pytest_tmp_run
 ```
 
-Current coverage includes parser behavior, valuation math, mock eBay mode, local fair-value lookup, and SQLite settings persistence.
+Current coverage includes parser behavior, valuation math, convention buy-target math, mock eBay mode, local fair-value lookup, and SQLite settings persistence.

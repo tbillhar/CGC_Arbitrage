@@ -41,10 +41,11 @@ EBAY_CLIENT_SECRET=your-production-client-secret
 9. Sort candidate listings by estimated profit and margin.
 10. Spot-check the top candidates manually on eBay before relying on them.
 11. Export candidates with `Export candidates CSV`.
+12. Export a convention buying sheet with `Export buy list CSV`; this creates one row per watchlist title/issue/grade with fair value, max buy price, expected profit at max buy, and expected margin.
 
 ## Buying Day
 
-1. Bring the exported CSV or keep the app available on the laptop.
+1. Bring the exported candidate CSV and buy-list CSV, or keep the app available on the laptop.
 2. Use `Max Buy` as the ceiling, not the target offer.
 3. Re-check current market values before making large purchases.
 4. Adjust scan settings if shipping, fees, or target margin assumptions change.
