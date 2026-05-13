@@ -64,9 +64,11 @@ class GoCollectConfig:
 @dataclass(frozen=True)
 class PricingConfig:
     selling_fee_rate: float = float(os.getenv("CGC_SELLING_FEE_RATE", "0.1325"))
-    payment_fee_rate: float = float(os.getenv("CGC_PAYMENT_FEE_RATE", "0.03"))
+    payment_fee_rate: float = float(os.getenv("CGC_PAYMENT_FEE_RATE", "0.00"))
+    fixed_order_fee: float = float(os.getenv("CGC_FIXED_ORDER_FEE", "0.40"))
     shipping_cost: float = float(os.getenv("CGC_SHIPPING_COST", "18.00"))
     default_profit_margin: float = float(os.getenv("CGC_DEFAULT_PROFIT_MARGIN", "0.20"))
+    max_publication_year: int = int(os.getenv("CGC_MAX_PUBLICATION_YEAR", "1979"))
 
 
 EBAY = EbayConfig()

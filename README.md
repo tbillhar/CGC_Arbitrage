@@ -58,6 +58,21 @@ EBAY_CLIENT_SECRET=your-production-client-secret
 
 The app defaults to production eBay Browse/OAuth URLs. Only set `EBAY_BROWSE_BASE_URL` and `EBAY_OAUTH_TOKEN_URL` if you are intentionally using sandbox keys.
 
+Live scans request fixed-price listings only. Auction listings are not actionable at the current bid price, so they are excluded by default.
+
+When eBay returns item specifics, the scanner also rejects listings marked as `Modern Age` or with a publication year after the configured cutoff. The default cutoff is 1979 for the current Silver/Bronze liquid list and can be changed with `CGC_MAX_PUBLICATION_YEAR`.
+
+## Pricing Defaults
+
+The default resale assumption is eBay fixed price:
+
+- `CGC_SELLING_FEE_RATE=0.1325`
+- `CGC_PAYMENT_FEE_RATE=0.00`
+- `CGC_FIXED_ORDER_FEE=0.40`
+- `CGC_SHIPPING_COST=18.00`
+
+The separate payment-fee field remains available for non-eBay scenarios, but eBay managed-payment processing is treated as part of the final value fee baseline.
+
 ## GoCollect Status
 
 GoCollect is currently a placeholder integration in [gocollect_client.py](gocollect_client.py).

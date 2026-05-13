@@ -31,6 +31,12 @@ class EbayListing:
     currency: str
     item_url: str
     seller_username: str
+    buying_options: tuple[str, ...] = ()
+    item_specifics: dict[str, str] | None = None
+
+    @property
+    def is_fixed_price(self) -> bool:
+        return "FIXED_PRICE" in self.buying_options
 
 
 class EbayCredentialsMissingError(RuntimeError):
@@ -74,7 +80,7 @@ class EbayClient:
             raise EbayCredentialsMissingError("eBay credentials are not configured.")
 
         query = f'{title} #{issue_number} CGC {min_grade:g} {max_grade:g}'
-        params = urlencode({"q": query, "limit": str(limit), "filter": "buyingOptions:{FIXED_PRICE|AUCTION}"})
+        params = urlencode({"q": query, "limit": str(limit), "filter": "buyingOptions:{FIXED_PRICE}"})
         try:
             payload = self._get_json(f"{self.config.browse_base_url}/item_summary/search?{params}")
         except (HTTPError, URLError, TimeoutError, json.JSONDecodeError) as error:
@@ -114,6 +120,8 @@ class EbayClient:
                         currency=(row.get("currency") or "USD").strip() or "USD",
                         item_url=row["item_url"].strip(),
                         seller_username=(row.get("seller_username") or "mock_seller").strip(),
+                        buying_options=self._mock_buying_options(row),
+                        item_specifics=self._mock_item_specifics(row),
                     )
                 )
                 if len(matches) >= limit:
@@ -133,6 +141,8 @@ class EbayClient:
                 currency=currency,
                 item_url=str(item.get("itemWebUrl", "")),
                 seller_username=str(seller.get("username", "")),
+                buying_options=self._buying_options(item),
+                item_specifics=self._item_specifics(item),
             )
 
     def _item_price(self, item: dict[str, Any]) -> tuple[float, str]:
@@ -145,6 +155,49 @@ class EbayClient:
             if value > 0:
                 return value, str(price.get("currency", "USD"))
         return 0.0, "USD"
+
+    def _buying_options(self, item: dict[str, Any]) -> tuple[str, ...]:
+        options = item.get("buyingOptions") or []
+        if isinstance(options, str):
+            options = [options]
+        normalized = tuple(str(option).upper() for option in options if option)
+        if normalized:
+            return normalized
+        if item.get("currentBidPrice") or item.get("minimumPriceToBid"):
+            return ("AUCTION",)
+        if item.get("price"):
+            return ("FIXED_PRICE",)
+        return ()
+
+    def _item_specifics(self, item: dict[str, Any]) -> dict[str, str]:
+        specifics: dict[str, str] = {}
+        for field_name in ("additionalItemProperties", "localizedAspects", "itemSpecifics"):
+            raw_properties = item.get(field_name) or []
+            if not isinstance(raw_properties, list):
+                continue
+            for property_value in raw_properties:
+                if not isinstance(property_value, dict):
+                    continue
+                name = str(property_value.get("name") or "").strip().casefold()
+                value = property_value.get("value")
+                if isinstance(value, list):
+                    normalized_value = ", ".join(str(part) for part in value if part)
+                else:
+                    normalized_value = str(value or "")
+                if name and normalized_value:
+                    specifics[name] = normalized_value.strip()
+        return specifics
+
+    def _mock_buying_options(self, row: dict[str, str]) -> tuple[str, ...]:
+        raw_value = (row.get("buying_options") or "FIXED_PRICE").strip()
+        return tuple(option.strip().upper() for option in raw_value.split("|") if option.strip())
+
+    def _mock_item_specifics(self, row: dict[str, str]) -> dict[str, str]:
+        specifics: dict[str, str] = {}
+        for key, value in row.items():
+            if key.startswith("specific_") and value:
+                specifics[key.removeprefix("specific_").replace("_", " ").casefold()] = value.strip()
+        return specifics
 
     def _get_json(self, url: str) -> dict[str, Any]:
         token = self._access_token or self._fetch_access_token()

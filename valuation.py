@@ -26,6 +26,7 @@ class DealMath:
     shipping_cost: float
     selling_fee_rate: float
     payment_fee_rate: float
+    fixed_order_fee: float
     target_profit_margin: float
     max_buy_price: float
     estimated_profit: float
@@ -130,7 +131,7 @@ def calculate_deal(
     """Calculate max buy price and expected return for a slab listing."""
 
     total_fee_rate = pricing.selling_fee_rate + pricing.payment_fee_rate
-    net_after_sale_costs = fair_value * (1 - total_fee_rate) - pricing.shipping_cost
+    net_after_sale_costs = fair_value * (1 - total_fee_rate) - pricing.shipping_cost - pricing.fixed_order_fee
     max_buy_price = max(0.0, net_after_sale_costs * (1 - target_profit_margin))
     estimated_profit = net_after_sale_costs - listing_price
     estimated_margin = estimated_profit / listing_price if listing_price > 0 else 0.0
@@ -141,6 +142,7 @@ def calculate_deal(
         shipping_cost=pricing.shipping_cost,
         selling_fee_rate=pricing.selling_fee_rate,
         payment_fee_rate=pricing.payment_fee_rate,
+        fixed_order_fee=pricing.fixed_order_fee,
         target_profit_margin=target_profit_margin,
         max_buy_price=round(max_buy_price, 2),
         estimated_profit=round(estimated_profit, 2),

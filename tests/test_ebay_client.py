@@ -63,6 +63,52 @@ def test_item_summary_uses_current_bid_price_when_price_is_absent() -> None:
 
     assert listings[0].price == 1275.50
     assert listings[0].currency == "USD"
+    assert listings[0].buying_options == ("AUCTION",)
+    assert listings[0].is_fixed_price is False
+
+
+def test_search_active_listings_requests_fixed_price_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    client = EbayClient(EbayConfig(mode="live", client_id="id", client_secret="secret"))
+    requested_urls: list[str] = []
+
+    def fake_get_json(url: str) -> dict[str, object]:
+        requested_urls.append(url)
+        return {"itemSummaries": []}
+
+    monkeypatch.setattr(client, "_get_json", fake_get_json)
+
+    client.search_active_listings("X-Men", "4", 5.0, 8.0)
+
+    assert "buyingOptions%3A%7BFIXED_PRICE%7D" in requested_urls[0]
+
+
+def test_item_summary_extracts_item_specifics() -> None:
+    client = EbayClient(EbayConfig(mode="mock"))
+
+    listings = list(
+        client._parse_item_summaries(
+            [
+                {
+                    "itemId": "modern-1",
+                    "title": "X-men 4 Cgc 5.0",
+                    "price": {"value": "100", "currency": "USD"},
+                    "buyingOptions": ["FIXED_PRICE"],
+                    "itemWebUrl": "https://example.test/modern-1",
+                    "seller": {"username": "seller"},
+                    "additionalItemProperties": [
+                        {"name": "Era", "value": "Modern Age (1992-Now)"},
+                        {"name": "Publication Year", "value": "1992"},
+                    ],
+                }
+            ]
+        )
+    )
+
+    assert listings[0].is_fixed_price is True
+    assert listings[0].item_specifics == {
+        "era": "Modern Age (1992-Now)",
+        "publication year": "1992",
+    }
 
 
 def test_request_json_retries_transient_url_errors(monkeypatch: pytest.MonkeyPatch) -> None:

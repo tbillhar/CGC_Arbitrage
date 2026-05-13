@@ -42,6 +42,7 @@ class CandidateListing:
 class AppSettings:
     selling_fee_rate: float
     payment_fee_rate: float
+    fixed_order_fee: float
     shipping_cost: float
     default_profit_margin: float
 
@@ -153,6 +154,7 @@ class Database:
         rows = [
             ("selling_fee_rate", str(settings.selling_fee_rate)),
             ("payment_fee_rate", str(settings.payment_fee_rate)),
+            ("fixed_order_fee", str(settings.fixed_order_fee)),
             ("shipping_cost", str(settings.shipping_cost)),
             ("default_profit_margin", str(settings.default_profit_margin)),
         ]

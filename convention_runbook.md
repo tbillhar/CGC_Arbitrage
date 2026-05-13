@@ -26,13 +26,16 @@ EBAY_CLIENT_SECRET=your-production-client-secret
 5. Click `Load liquid list` if the watchlist is empty or has been reset.
 6. Review scan settings:
    - selling fee %
-   - payment fee %
+   - extra payment fee %
+   - fixed order fee
    - shipping cost
    - default margin %
 7. Click `Scan watchlist`.
 8. Review diagnostics for:
    - eBay API/configuration issues
    - listings returned
+   - auction listings skipped
+   - modern era/year item specifics skipped
    - missing fair values
    - unprofitable listings
 9. Sort candidate listings by estimated profit and margin.

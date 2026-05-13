@@ -7,7 +7,7 @@ from valuation import LocalFairValueProvider, calculate_deal
 
 
 def test_calculate_deal_marks_profitable_candidate() -> None:
-    pricing = PricingConfig(selling_fee_rate=0.10, payment_fee_rate=0.03, shipping_cost=20)
+    pricing = PricingConfig(selling_fee_rate=0.10, payment_fee_rate=0.03, fixed_order_fee=0, shipping_cost=20)
 
     deal = calculate_deal(1000, 650, 0.20, pricing)
 
@@ -18,12 +18,22 @@ def test_calculate_deal_marks_profitable_candidate() -> None:
 
 
 def test_calculate_deal_rejects_listing_above_max_buy() -> None:
-    pricing = PricingConfig(selling_fee_rate=0.10, payment_fee_rate=0.03, shipping_cost=20)
+    pricing = PricingConfig(selling_fee_rate=0.10, payment_fee_rate=0.03, fixed_order_fee=0, shipping_cost=20)
 
     deal = calculate_deal(1000, 725, 0.20, pricing)
 
     assert deal.max_buy_price == 680.0
     assert deal.is_candidate is False
+
+
+def test_calculate_deal_subtracts_fixed_order_fee() -> None:
+    pricing = PricingConfig(selling_fee_rate=0.1325, payment_fee_rate=0, fixed_order_fee=0.40, shipping_cost=18)
+
+    deal = calculate_deal(1000, 675, 0.20, pricing)
+
+    assert deal.max_buy_price == 679.28
+    assert deal.estimated_profit == 174.10
+    assert deal.is_candidate is True
 
 
 def test_local_fair_value_provider_matches_case_insensitive_title(tmp_path: Path) -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import re
 import sys
 from dataclasses import dataclass, field
 from typing import Any
@@ -73,12 +74,15 @@ class ScanDiagnostics:
     title_mismatch: int = 0
     issue_mismatch: int = 0
     deal_breaker_flags: int = 0
+    item_specifics_excluded: int = 0
+    auction_listing: int = 0
     grade_out_of_range: int = 0
     missing_fair_value: int = 0
     unprofitable: int = 0
     candidates: int = 0
     selling_fee_rate: float = 0.0
     payment_fee_rate: float = 0.0
+    fixed_order_fee: float = 0.0
     shipping_cost: float = 0.0
     default_profit_margin: float = 0.0
     api_errors: list[str] = field(default_factory=list)
@@ -95,6 +99,8 @@ class ScanDiagnostics:
             f"Skipped: title mismatch: {self.title_mismatch}",
             f"Skipped: issue mismatch: {self.issue_mismatch}",
             f"Skipped: qualified/restored/incomplete: {self.deal_breaker_flags}",
+            f"Skipped: modern era/year item specifics: {self.item_specifics_excluded}",
+            f"Skipped: auction listing: {self.auction_listing}",
             f"Skipped: grade outside watchlist range: {self.grade_out_of_range}",
             f"Skipped: no GoCollect/local fair value: {self.missing_fair_value}",
             f"Skipped: below target profit: {self.unprofitable}",
@@ -102,7 +108,8 @@ class ScanDiagnostics:
             (
                 "Assumptions: "
                 f"selling fee {self.selling_fee_rate * 100:.2f}%, "
-                f"payment fee {self.payment_fee_rate * 100:.2f}%, "
+                f"extra payment fee {self.payment_fee_rate * 100:.2f}%, "
+                f"fixed order fee ${self.fixed_order_fee:.2f}, "
                 f"shipping ${self.shipping_cost:.2f}, "
                 f"default margin {self.default_profit_margin * 100:.1f}%"
             ),
@@ -169,6 +176,12 @@ class ScannerWindow(QMainWindow):
         self.payment_fee_input.setDecimals(2)
         self.payment_fee_input.setSuffix("%")
         self.payment_fee_input.setValue(PRICING.payment_fee_rate * 100)
+        self.fixed_order_fee_input = QDoubleSpinBox()
+        self.fixed_order_fee_input.setRange(0, 10)
+        self.fixed_order_fee_input.setSingleStep(0.05)
+        self.fixed_order_fee_input.setDecimals(2)
+        self.fixed_order_fee_input.setPrefix("$")
+        self.fixed_order_fee_input.setValue(PRICING.fixed_order_fee)
         self.shipping_cost_input = QDoubleSpinBox()
         self.shipping_cost_input.setRange(0, 500)
         self.shipping_cost_input.setSingleStep(1)
@@ -184,7 +197,8 @@ class ScannerWindow(QMainWindow):
         self.default_margin_input.valueChanged.connect(self._sync_default_margin)
 
         settings_form.addRow("Selling fee", self.selling_fee_input)
-        settings_form.addRow("Payment fee", self.payment_fee_input)
+        settings_form.addRow("Extra payment fee", self.payment_fee_input)
+        settings_form.addRow("Fixed order fee", self.fixed_order_fee_input)
         settings_form.addRow("Shipping cost", self.shipping_cost_input)
         settings_form.addRow("Default margin", self.default_margin_input)
         layout.addWidget(settings_group)
@@ -368,6 +382,7 @@ class ScannerWindow(QMainWindow):
             watchlist_items=len(watchlist),
             selling_fee_rate=pricing.selling_fee_rate,
             payment_fee_rate=pricing.payment_fee_rate,
+            fixed_order_fee=pricing.fixed_order_fee,
             shipping_cost=pricing.shipping_cost,
             default_profit_margin=default_margin,
         )
@@ -396,6 +411,12 @@ class ScannerWindow(QMainWindow):
             for listing in listings:
                 if listing.price <= 0:
                     diagnostics.missing_price += 1
+                    continue
+                if not listing.is_fixed_price:
+                    diagnostics.auction_listing += 1
+                    continue
+                if self._is_excluded_by_item_specifics(listing.item_specifics or {}):
+                    diagnostics.item_specifics_excluded += 1
                     continue
                 if not self._title_matches(item.title, listing.title):
                     diagnostics.title_mismatch += 1
@@ -470,6 +491,7 @@ class ScannerWindow(QMainWindow):
         return PricingConfig(
             selling_fee_rate=self.selling_fee_input.value() / 100,
             payment_fee_rate=self.payment_fee_input.value() / 100,
+            fixed_order_fee=self.fixed_order_fee_input.value(),
             shipping_cost=self.shipping_cost_input.value(),
             default_profit_margin=self.default_margin_input.value() / 100,
         )
@@ -477,7 +499,8 @@ class ScannerWindow(QMainWindow):
     def _load_scan_settings(self) -> None:
         settings = self.database.get_app_settings()
         self.selling_fee_input.setValue(self._setting_float(settings, "selling_fee_rate", PRICING.selling_fee_rate) * 100)
-        self.payment_fee_input.setValue(self._setting_float(settings, "payment_fee_rate", PRICING.payment_fee_rate) * 100)
+        self.payment_fee_input.setValue(self._payment_fee_setting(settings) * 100)
+        self.fixed_order_fee_input.setValue(self._setting_float(settings, "fixed_order_fee", PRICING.fixed_order_fee))
         self.shipping_cost_input.setValue(self._setting_float(settings, "shipping_cost", PRICING.shipping_cost))
         self.default_margin_input.setValue(
             self._setting_float(settings, "default_profit_margin", PRICING.default_profit_margin) * 100
@@ -488,6 +511,7 @@ class ScannerWindow(QMainWindow):
             AppSettings(
                 selling_fee_rate=self.selling_fee_input.value() / 100,
                 payment_fee_rate=self.payment_fee_input.value() / 100,
+                fixed_order_fee=self.fixed_order_fee_input.value(),
                 shipping_cost=self.shipping_cost_input.value(),
                 default_profit_margin=self.default_margin_input.value() / 100,
             )
@@ -498,6 +522,27 @@ class ScannerWindow(QMainWindow):
             return float(settings.get(key, default))
         except (TypeError, ValueError):
             return default
+
+    def _payment_fee_setting(self, settings: dict[str, str]) -> float:
+        if settings.get("payment_fee_rate") == "0.03" and "fixed_order_fee" not in settings:
+            return PRICING.payment_fee_rate
+        return self._setting_float(settings, "payment_fee_rate", PRICING.payment_fee_rate)
+
+    def _is_excluded_by_item_specifics(self, specifics: dict[str, str]) -> bool:
+        era = specifics.get("era", "")
+        if "modern age" in era.casefold():
+            return True
+
+        publication_year = self._specific_publication_year(specifics)
+        return publication_year is not None and publication_year > PRICING.max_publication_year
+
+    def _specific_publication_year(self, specifics: dict[str, str]) -> int | None:
+        for key in ("publication year", "year"):
+            value = specifics.get(key, "")
+            match = re.search(r"\b(19[0-9]{2}|20[0-9]{2})\b", value)
+            if match:
+                return int(match.group(1))
+        return None
 
     def _issue_matches(self, watch_issue: str, parsed_issue: str) -> bool:
         return self._normalize_issue(watch_issue) == self._normalize_issue(parsed_issue)
